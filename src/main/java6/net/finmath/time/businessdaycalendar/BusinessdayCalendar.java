@@ -131,8 +131,13 @@ public abstract class BusinessdayCalendar implements BusinessdayCalendarInterfac
 			case "bd":
 			{
 				int maturityValue = Integer.valueOf(maturityCodeSingle.substring(0, maturityCodeSingle.length()-2));
+				boolean isPositiveAdjustment = true;
+				if(maturityValue<0) {
+					isPositiveAdjustment = false;
+					maturityValue *= -1;
+				}
 				while(maturityValue>0) {
-					maturity = this.getAdjustedDate(maturity.plusDays(maturityValue),DateRollConvention.FOLLOWING);
+					maturity = this.getAdjustedDate(isPositiveAdjustment?maturity.plusDays(1):maturity.minusDays(1),DateRollConvention.FOLLOWING);
 					maturityValue -= 1;
 				}
 				break;
