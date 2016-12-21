@@ -116,7 +116,10 @@ public class SwapLegWithResetting extends AbstractAnalyticProduct implements Ana
 
 			double forward		= spread;
 			if(forwardCurve != null) {
-				forward			+= forwardCurve.getForward(model, fixingDate, paymentDate-fixingDate);
+				forward += forwardCurve.getForward(model, fixingDate);
+				//double periodStartDate	= legSchedule.getPeriodStart(periodIndex);
+				//double periodEndDate	= legSchedule.getPeriodEnd(periodIndex);
+				//forward += forwardCurve.getForward(model, fixingDate, periodEndDate-periodStartDate); // if forwardCurve=forwardCurveFromDiscountCurve then this takes the swapPeriod as the liborPeriod and there may be small differences. Note that getForward(model, fixingDate) should be the prefered solution 
 			}
 			else if(discountCurveForForward != null) {
 				/*
