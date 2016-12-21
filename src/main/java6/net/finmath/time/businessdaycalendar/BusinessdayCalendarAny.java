@@ -28,5 +28,8 @@ public class BusinessdayCalendarAny extends BusinessdayCalendar {
 	public boolean isBusinessday(LocalDate date) {
 		return true;
 	}
-
+	
+	public String toString() {
+		return "BusinessdayCalendarAny";
+	}
 }

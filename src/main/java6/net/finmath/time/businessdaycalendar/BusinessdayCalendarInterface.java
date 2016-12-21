@@ -83,4 +83,6 @@ public interface BusinessdayCalendarInterface {
 	 * @return A date of a business day such that the number of business days between this one (including) and the start date (excluding) is businessDays.
 	 */
 	public LocalDate getRolledDate(LocalDate baseDate, int businessDays);
+	
+	public String toString();
 }

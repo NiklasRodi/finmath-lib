@@ -152,4 +152,8 @@ public abstract class BusinessdayCalendar implements BusinessdayCalendarInterfac
 
 		return maturity;
 	}
+	
+	public String toString() {
+		return "BusinessdayCalendar";
+	}
 }
