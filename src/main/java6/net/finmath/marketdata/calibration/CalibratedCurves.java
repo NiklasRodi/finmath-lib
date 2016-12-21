@@ -462,6 +462,10 @@ public class CalibratedCurves {
 		else if(calibrationSpec.type.toLowerCase().equals("fra")){
 			product = new ForwardRateAgreement(tenorReceiver, calibrationSpec.spreadReceiver, forwardCurveReceiverName, calibrationSpec.discountCurveReceiverName);
 		}
+		else if(calibrationSpec.type.toLowerCase().equals("future")){
+		// like a fra but future price needs to be translated into rate
+		product = new ForwardRateAgreement(tenorReceiver, 1.0-calibrationSpec.spreadReceiver/100.0, forwardCurveReceiverName, calibrationSpec.discountCurveReceiverName);
+		}
 		else {
 			throw new RuntimeException("Product of type " + calibrationSpec.type + " unknown.");
 		}

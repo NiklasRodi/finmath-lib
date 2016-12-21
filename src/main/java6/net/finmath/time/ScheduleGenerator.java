@@ -8,10 +8,12 @@ package net.finmath.time;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Locale;
 
 import org.joda.time.LocalDate;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
-import net.finmath.time.businessdaycalendar.BusinessdayCalendar;
 import net.finmath.time.businessdaycalendar.BusinessdayCalendarAny;
 import net.finmath.time.businessdaycalendar.BusinessdayCalendarInterface;
 import net.finmath.time.businessdaycalendar.BusinessdayCalendarInterface.DateRollConvention;
@@ -703,7 +705,47 @@ public class ScheduleGenerator {
 				);
 		
 	}
+	
+	public static ScheduleInterface createScheduleFromConventions(
+			LocalDate referenceDate,
+			String futureCode,
+			String startOffset,
+			String maturity,
+			String frequency,
+			String daycountConvention,
+			String shortPeriodConvention,
+			String dateRollConvention,
+			BusinessdayCalendarInterface businessdayCalendar,
+			int	fixingOffsetDays,
+			int	paymentOffsetDays
+			)
+	{
+		int futureExpiryYears = 2000 + Integer.parseInt(futureCode.substring(futureCode.length()-2));
+		String futureExpiryMonthsString = futureCode.substring(0,futureCode.length()-2);
+		DateTimeFormatter englishDateFormatter = DateTimeFormat.forPattern("dd/MMM/yyyy").withLocale(Locale.ENGLISH);;
+		String futureExpiryString = "01/" + futureExpiryMonthsString + "/" + futureExpiryYears;
+		LocalDate futureExpiryDate = englishDateFormatter.parseLocalDate(futureExpiryString);
+		// get third wednesday in month, adjust with following if no busday
+		while(futureExpiryDate.getDayOfWeek()!=3)
+			futureExpiryDate = futureExpiryDate.plusDays(1);
+		futureExpiryDate = futureExpiryDate.plusWeeks(2);
+		futureExpiryDate = businessdayCalendar.getAdjustedDate(futureExpiryDate, startOffset, DateRollConvention.FOLLOWING); // adjust to the next good busday
 
+		LocalDate maturityDate = businessdayCalendar.createDateFromDateAndOffsetCode(futureExpiryDate, maturity);
+		return createScheduleFromConventions(
+				referenceDate,
+				futureExpiryDate,
+				maturityDate,
+				Frequency.valueOf(frequency.replace("/", "_").toUpperCase()), 
+				DaycountConvention.getEnum(daycountConvention),
+				ShortPeriodConvention.valueOf(shortPeriodConvention.replace("/", "_").toUpperCase()),
+				DateRollConvention.getEnum(dateRollConvention),
+				businessdayCalendar,
+				fixingOffsetDays,
+				paymentOffsetDays
+		);
+	}
+	
 	/**
 	 * Generates a schedule based on some meta data. The schedule generation
 	 * considers short periods. Date rolling is ignored.
