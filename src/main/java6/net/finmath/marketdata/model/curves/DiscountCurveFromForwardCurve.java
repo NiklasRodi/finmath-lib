@@ -30,7 +30,8 @@ import net.finmath.marketdata.model.AnalyticModelInterface;
  * @author Christian Fries
  */
 public class DiscountCurveFromForwardCurve extends AbstractCurve implements Serializable, DiscountCurveInterface {
-
+	
+	public static final String nameSuffix = "_asDiscountCurve";
 	private static final long serialVersionUID = -4126228588123963885L;
 
 	private String					forwardCurveName;
@@ -50,10 +51,12 @@ public class DiscountCurveFromForwardCurve extends AbstractCurve implements Seri
 	 * @param periodLengthTimeScaling A scaling factor applied to d, adjusting for the internal double time to the period length daycount fraction (note that this may only be an approximate solution to capture daycount effects).
 	 */
 	public DiscountCurveFromForwardCurve(String forwardCurveName, double periodLengthTimeScaling) {
-		super("DiscountCurveFromForwardCurve(" + forwardCurveName + ")", null);
+		super(forwardCurveName + nameSuffix, null);
 
 		this.forwardCurveName	= forwardCurveName;
 		this.timeScaling		= periodLengthTimeScaling;
+		
+		System.out.println("DiscountCurveFromForwardCurve(): Create discount curve '" + forwardCurveName + nameSuffix + "' from forward curve '" + forwardCurveName);
 	}
 
 	/**
@@ -68,10 +71,8 @@ public class DiscountCurveFromForwardCurve extends AbstractCurve implements Seri
 	 * @param periodLengthTimeScaling A scaling factor applied to d, adjusting for the internal double time to the period length daycount fraction (note that this may only be an approximate solution to capture daycount effects).
 	 */
 	public DiscountCurveFromForwardCurve(ForwardCurveInterface forwardCurve, double periodLengthTimeScaling) {
-		super("DiscountCurveFromForwardCurve" + forwardCurve.getName() + ")", null);
-
+		this(forwardCurve.getName(), periodLengthTimeScaling);
 		this.forwardCurve	= forwardCurve;
-		this.timeScaling	= periodLengthTimeScaling;
 	}
    
 	/**
@@ -116,10 +117,15 @@ public class DiscountCurveFromForwardCurve extends AbstractCurve implements Seri
 	@Override
 	public double getDiscountFactor(AnalyticModelInterface model, double maturity) {
 		ForwardCurveInterface	forwardCurve;
-		if(this.forwardCurve != null)	forwardCurve = this.forwardCurve;
-		else							forwardCurve = model.getForwardCurve(forwardCurveName);
+		if(this.forwardCurve != null)	
+			forwardCurve = this.forwardCurve;
+		else if(model != null)						
+			forwardCurve = model.getForwardCurve(forwardCurveName);
+		else
+			throw new IllegalArgumentException("Cannot get discount factor without curve or model.");
 
-		if(forwardCurve == null) throw new IllegalArgumentException("No forward curve given and no forward curve found in the model under the name " + forwardCurveName + ".");
+		if(forwardCurve == null) 
+			throw new IllegalArgumentException("No forward curve given and no forward curve found in the model under the name " + forwardCurveName + ".");
 
 		double	time			= 0;
 		double	discountFactor	= 1.0;
