@@ -86,7 +86,7 @@ public abstract class BusinessdayCalendar implements BusinessdayCalendarInterfac
 	 * @return The adjusted date applying dateRollConvention to the given date.
 	 */
 	public LocalDate getAdjustedDate(LocalDate baseDate, String dateOffsetCode, DateRollConvention dateRollConvention) {
-		return this.getAdjustedDate(createDateFromDateAndOffsetCode(baseDate, dateOffsetCode), dateRollConvention);
+		return this.getAdjustedDate(this.createDateFromDateAndOffsetCode(baseDate, dateOffsetCode), dateRollConvention);
 	}
 
 	/**
@@ -107,7 +107,7 @@ public abstract class BusinessdayCalendar implements BusinessdayCalendarInterfac
 	 * @param dateOffsetCode String containing date offset codes (like 2D, 1W, 3M, etc.) or combination of them separated by spaces.
 	 * @return A date corresponding the date adding the offset to the start date.
 	 */
-	public static LocalDate createDateFromDateAndOffsetCode(LocalDate baseDate, String dateOffsetCode) {
+	public LocalDate createDateFromDateAndOffsetCode(LocalDate baseDate, String dateOffsetCode) {
 		dateOffsetCode = dateOffsetCode.trim();
 
 		StringTokenizer tokenizer = new StringTokenizer(dateOffsetCode);
@@ -115,38 +115,51 @@ public abstract class BusinessdayCalendar implements BusinessdayCalendarInterfac
 		LocalDate maturity = baseDate;
 		while(tokenizer.hasMoreTokens()) {
 			String maturityCodeSingle = tokenizer.nextToken();
-
-			char unitChar = maturityCodeSingle.toLowerCase().charAt(maturityCodeSingle.length()-1);
-
-			switch(unitChar) {
-			case 'd':
+			
+			// get unit string (usually the last char but may be last two chars)
+			String unitString = maturityCodeSingle.toLowerCase().substring(maturityCodeSingle.length()-2); 
+			if(!unitString.equals("bd"))
+				unitString = unitString.substring(unitString.length()-1);
+			
+			switch(unitString) {
+			case "d":
 			{
 				int maturityValue = Integer.valueOf(maturityCodeSingle.substring(0, maturityCodeSingle.length()-1));
 				maturity = maturity.plusDays(maturityValue);
 				break;
 			}
-			case 'w':
+			case "bd":
+			{
+				int maturityValue = Integer.valueOf(maturityCodeSingle.substring(0, maturityCodeSingle.length()-2));
+				while(maturityValue>0) {
+					maturity = this.getAdjustedDate(maturity.plusDays(maturityValue),DateRollConvention.FOLLOWING);
+					maturityValue -= 1;
+				}
+				break;
+			}
+			case "w":
 			{
 				int maturityValue = Integer.valueOf(maturityCodeSingle.substring(0, maturityCodeSingle.length()-1));
 				maturity = maturity.plusWeeks(maturityValue);
 				break;
 			}
-			case 'm':
+			case "m":
 			{
-				int maturityValue = Integer.valueOf(maturityCodeSingle.substring(0, maturityCodeSingle.length()-1));
+				int maturityValue = Integer.valueOf(maturityCodeSingle.substring(0, maturityCodeSingle.length()-1));					
 				maturity = maturity.plusMonths(maturityValue);
 				break;
 			}
-			case 'y':
+			case "y":
 			{
 				int maturityValue = Integer.valueOf(maturityCodeSingle.substring(0, maturityCodeSingle.length()-1));
 				maturity = maturity.plusYears(maturityValue);
 				break;
 			}
 			default:
+				throw new IllegalArgumentException("Cannot handle dateOffsetCode '" + dateOffsetCode + "'.");
 				// Try to parse a double as ACT/365
-				double maturityValue	= Double.valueOf(maturityCodeSingle);
-				maturity = maturity.plusDays((int)Math.round(maturityValue * 365));
+				//double maturityValue	= Double.valueOf(maturityCodeSingle);
+				//maturity = maturity.plusDays((int)Math.round(maturityValue * 365));
 			}
 		}
 

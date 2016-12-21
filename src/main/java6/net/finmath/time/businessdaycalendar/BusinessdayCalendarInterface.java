@@ -56,6 +56,8 @@ public interface BusinessdayCalendarInterface {
 	 */
 	LocalDate getAdjustedDate(LocalDate date, DateRollConvention dateRollConvention);
 
+	LocalDate createDateFromDateAndOffsetCode(LocalDate baseDate, String dateOffsetCode);
+	
 	/**
 	 * Get an adjusted date for a given date and offset code.
 	 * 

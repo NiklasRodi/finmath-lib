@@ -498,9 +498,9 @@ public class ScheduleGenerator {
 	
 		LocalDate spotDate = businessdayCalendar.getRolledDate(tradeDate, spotOffsetDays);
 		
-		LocalDate startDate = BusinessdayCalendar.createDateFromDateAndOffsetCode(spotDate, startOffset);
+		LocalDate startDate = businessdayCalendar.createDateFromDateAndOffsetCode(spotDate, startOffset);
 	
-		LocalDate maturityDate = BusinessdayCalendar.createDateFromDateAndOffsetCode(startDate, maturity);
+		LocalDate maturityDate = businessdayCalendar.createDateFromDateAndOffsetCode(startDate, maturity);
 	
 		return createScheduleFromConventions(
 				referenceDate,
@@ -554,9 +554,9 @@ public class ScheduleGenerator {
 		
 		LocalDate spotDate = businessdayCalendar.getRolledDate(referenceDate, spotOffsetDays);
 		
-		LocalDate startDate = BusinessdayCalendar.createDateFromDateAndOffsetCode(spotDate, startOffset);
+		LocalDate startDate = businessdayCalendar.createDateFromDateAndOffsetCode(spotDate, startOffset);
 	
-		LocalDate maturityDate = BusinessdayCalendar.createDateFromDateAndOffsetCode(startDate, maturity);
+		LocalDate maturityDate = businessdayCalendar.createDateFromDateAndOffsetCode(startDate, maturity);
 	
 		return createScheduleFromConventions(
 				referenceDate,
@@ -640,9 +640,9 @@ public class ScheduleGenerator {
 			int	paymentOffsetDays
 			)
 	{
-		LocalDate startDate = BusinessdayCalendar.createDateFromDateAndOffsetCode(referenceDate, startOffset);
+		LocalDate startDate = businessdayCalendar.createDateFromDateAndOffsetCode(referenceDate, startOffset);
 	
-		LocalDate maturityDate = BusinessdayCalendar.createDateFromDateAndOffsetCode(startDate, maturity);
+		LocalDate maturityDate = businessdayCalendar.createDateFromDateAndOffsetCode(startDate, maturity);
 	
 		return createScheduleFromConventions(
 				referenceDate,
