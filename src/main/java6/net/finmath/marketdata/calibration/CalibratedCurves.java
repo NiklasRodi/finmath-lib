@@ -426,46 +426,47 @@ public class CalibratedCurves {
 	}
 
 	public AnalyticProductInterface getCalibrationProductForSpec(CalibrationSpec calibrationSpec) {
-		createDiscountCurve(calibrationSpec.discountCurveReceiverName);
-		createDiscountCurve(calibrationSpec.discountCurvePayerName);
-
-		String forwardCurveReceiverName = createForwardCurve(calibrationSpec.swapTenorDefinitionReceiver, calibrationSpec.forwardCurveReceiverName);
-		String forwardCurvePayerName	= createForwardCurve(calibrationSpec.swapTenorDefinitionPayer, calibrationSpec.forwardCurvePayerName);
+		String discountCurveReceiverName = calibrationSpec.discountCurveReceiverName;
+		discountCurveReceiverName = createDiscountCurve(discountCurveReceiverName);
+		String forwardCurveReceiverName = calibrationSpec.forwardCurveReceiverName;
+		forwardCurveReceiverName = createForwardCurve(calibrationSpec.swapTenorDefinitionReceiver, forwardCurveReceiverName);
 
 		ScheduleInterface tenorReceiver = calibrationSpec.swapTenorDefinitionReceiver;
 		ScheduleInterface tenorPayer	= calibrationSpec.swapTenorDefinitionPayer;
 
 		AnalyticProductInterface product = null;
-		if(calibrationSpec.type.toLowerCase().equals("swap")) {
-			product = new Swap(tenorReceiver, forwardCurveReceiverName, calibrationSpec.spreadReceiver, calibrationSpec.discountCurveReceiverName, tenorPayer, forwardCurvePayerName, calibrationSpec.spreadPayer, calibrationSpec.discountCurvePayerName);
-		}
-		else if(calibrationSpec.type.toLowerCase().equals("swapleg")) {
-			product = new SwapLeg(tenorReceiver, forwardCurveReceiverName, calibrationSpec.spreadReceiver, calibrationSpec.discountCurveReceiverName, true);
-		}
-		else if(calibrationSpec.type.toLowerCase().equals("swapwithresetonreceiver")) {
-			String discountCurveForNotionalResetName = calibrationSpec.discountCurvePayerName;
-			SwapLeg	legReceiver	= new SwapLeg(tenorReceiver, forwardCurveReceiverName, calibrationSpec.spreadReceiver, calibrationSpec.discountCurveReceiverName, discountCurveForNotionalResetName, true);
-			SwapLeg	legPayer	= new SwapLeg(tenorPayer, forwardCurvePayerName, calibrationSpec.spreadPayer, calibrationSpec.forwardCurvePayerName, true);
-			product = new Swap(legReceiver, legPayer);
-		}
-		else if(calibrationSpec.type.toLowerCase().equals("swapwithresetonpayer")) {
-			String discountCurveForNotionalResetName = calibrationSpec.discountCurveReceiverName;
-			SwapLeg	legReceiver	= new SwapLeg(tenorReceiver, forwardCurveReceiverName, calibrationSpec.spreadReceiver, calibrationSpec.discountCurveReceiverName, true);
-			SwapLeg	legPayer	= new SwapLeg(tenorPayer, forwardCurvePayerName, calibrationSpec.spreadPayer, calibrationSpec.discountCurvePayerName, discountCurveForNotionalResetName, true);
-			product = new Swap(legReceiver, legPayer);
-		}
-		else if(calibrationSpec.type.toLowerCase().equals("deposit")){
-			product = new Deposit(tenorReceiver, calibrationSpec.spreadReceiver, calibrationSpec.discountCurveReceiverName);
-		}
-		else if(calibrationSpec.type.toLowerCase().equals("fra")){
-			product = new ForwardRateAgreement(tenorReceiver, calibrationSpec.spreadReceiver, forwardCurveReceiverName, calibrationSpec.discountCurveReceiverName);
-		}
-		else if(calibrationSpec.type.toLowerCase().equals("future")){
-		// like a fra but future price needs to be translated into rate
-		product = new ForwardRateAgreement(tenorReceiver, 1.0-calibrationSpec.spreadReceiver/100.0, forwardCurveReceiverName, calibrationSpec.discountCurveReceiverName);
-		}
-		else {
-			throw new RuntimeException("Product of type " + calibrationSpec.type + " unknown.");
+		if(calibrationSpec.type.toLowerCase().equals("swapleg")) {
+			product = new SwapLeg(tenorReceiver, forwardCurveReceiverName, calibrationSpec.spreadReceiver, discountCurveReceiverName, true);
+		} else if(calibrationSpec.type.toLowerCase().equals("deposit")){
+			product = new Deposit(tenorReceiver, calibrationSpec.spreadReceiver, discountCurveReceiverName);
+		} else if(calibrationSpec.type.toLowerCase().equals("fra")){
+			product = new ForwardRateAgreement(tenorReceiver, calibrationSpec.spreadReceiver, forwardCurveReceiverName, discountCurveReceiverName);
+		} else if(calibrationSpec.type.toLowerCase().equals("future")){
+			// like a fra but future price needs to be translated into rate
+			product = new ForwardRateAgreement(tenorReceiver, 1.0-calibrationSpec.spreadReceiver/100.0, forwardCurveReceiverName, discountCurveReceiverName);
+		} else {
+			// note that previous products do not require discountCurvePayer or forwardCurvePayer
+			String discountCurvePayerName = calibrationSpec.discountCurvePayerName;
+			discountCurvePayerName = createDiscountCurve(discountCurvePayerName);
+			String forwardCurvePayerName = calibrationSpec.forwardCurvePayerName;
+			forwardCurvePayerName	= createForwardCurve(calibrationSpec.swapTenorDefinitionPayer, forwardCurvePayerName);
+			if(calibrationSpec.type.toLowerCase().equals("swap")) {
+				product = new Swap(tenorReceiver, forwardCurveReceiverName, calibrationSpec.spreadReceiver, discountCurveReceiverName, tenorPayer, forwardCurvePayerName, calibrationSpec.spreadPayer, discountCurvePayerName, false);
+			}
+			else if(calibrationSpec.type.toLowerCase().equals("swapwithresetonreceiver")) {
+				String discountCurveForNotionalResetName = discountCurvePayerName;
+				SwapLeg	legReceiver	= new SwapLeg(tenorReceiver, forwardCurveReceiverName, calibrationSpec.spreadReceiver, discountCurveReceiverName, discountCurveForNotionalResetName, true);
+				SwapLeg	legPayer	= new SwapLeg(tenorPayer, forwardCurvePayerName, calibrationSpec.spreadPayer, discountCurvePayerName, true);
+				product = new Swap(legReceiver, legPayer);
+			}
+			else if(calibrationSpec.type.toLowerCase().equals("swapwithresetonpayer")) {
+				String discountCurveForNotionalResetName = discountCurveReceiverName;
+				SwapLeg	legReceiver	= new SwapLeg(tenorReceiver, forwardCurveReceiverName, calibrationSpec.spreadReceiver, discountCurveReceiverName, true);
+				SwapLeg	legPayer	= new SwapLeg(tenorPayer, forwardCurvePayerName, calibrationSpec.spreadPayer, discountCurvePayerName, discountCurveForNotionalResetName, true);
+				product = new Swap(legReceiver, legPayer);
+			} else {
+				throw new RuntimeException("Product of type " + calibrationSpec.type + " unknown.");
+			}
 		}
 
 		return product;
@@ -706,16 +707,16 @@ public class CalibratedCurves {
 	 * Get a discount curve from the model, if not existing create a discount curve.
 	 * 
 	 * @param discountCurveName The name of the discount curve to create.
-	 * @return The discount factor curve associated with the given name.
+	 * @return The name of the discount factor curve associated with the given name.
 	 */
-	private DiscountCurveInterface createDiscountCurve(String discountCurveName) {
+	private String createDiscountCurve(String discountCurveName) {
 		DiscountCurveInterface discountCurve	= model.getDiscountCurve(discountCurveName);
 		if(discountCurve == null) {
 			discountCurve = DiscountCurve.createDiscountCurveFromDiscountFactors(discountCurveName, new double[] { 0.0 }, new double[] { 1.0 });
 			model = model.addCurves(discountCurve);
 		}
 
-		return discountCurve;
+		return discountCurve.getName();
 	}
 
 	/**
@@ -723,18 +724,16 @@ public class CalibratedCurves {
 	 * 
 	 * @param swapTenorDefinition The swap tenor associated with the forward curve.
 	 * @param forwardCurveName The name of the forward curve to create.
-	 * @return The forward curve associated with the given name.
+	 * @return The name of the forward curve associated with the given name.
 	 */
 	private String createForwardCurve(ScheduleInterface swapTenorDefinition, String forwardCurveName) {
 
-		/*
-		 * Temporary "hack" - we try to infer index maturity codes from curve name.
-		 */
+		// Temporary "hack" - we try to infer index maturity codes from curve name.
 		String indexMaturityCode = null;
-		if(forwardCurveName.contains("_12M") || forwardCurveName.contains("-12M") || forwardCurveName.contains(" 12M"))	indexMaturityCode = "12M";
-		if(forwardCurveName.contains("_1M")	|| forwardCurveName.contains("-1M")	|| forwardCurveName.contains(" 1M"))	indexMaturityCode = "1M";
-		if(forwardCurveName.contains("_6M")	|| forwardCurveName.contains("-6M")	|| forwardCurveName.contains(" 6M"))	indexMaturityCode = "6M";
-		if(forwardCurveName.contains("_3M") || forwardCurveName.contains("-3M") || forwardCurveName.contains(" 3M"))	indexMaturityCode = "3M";
+		if(forwardCurveName.contains("12M") || forwardCurveName.contains("_12M") || forwardCurveName.contains("-12M") || forwardCurveName.contains(" 12M"))	indexMaturityCode = "12M";
+		if(forwardCurveName.contains("1M") || forwardCurveName.contains("_1M")	|| forwardCurveName.contains("-1M")	|| forwardCurveName.contains(" 1M"))	indexMaturityCode = "1M";
+		if(forwardCurveName.contains("6M") || forwardCurveName.contains("_6M")	|| forwardCurveName.contains("-6M")	|| forwardCurveName.contains(" 6M"))	indexMaturityCode = "6M";
+		if(forwardCurveName.contains("3M") || forwardCurveName.contains("_3M") || forwardCurveName.contains("-3M") || forwardCurveName.contains(" 3M"))	indexMaturityCode = "3M";
 
 		if(forwardCurveName == null || forwardCurveName.isEmpty()) return null;
 
