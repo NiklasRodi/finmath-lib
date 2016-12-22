@@ -67,18 +67,19 @@ public class ForwardRateAgreement extends AbstractAnalyticProduct implements Ana
 		DiscountCurveInterface	discountCurve	= model.getDiscountCurve(discountCurveName);
 
 		double fixingDate = schedule.getFixing(0);
-		double periodLength = schedule.getPeriodLength(0);
-
 		double forward = 0.0;		
 		if(forwardCurve != null) 
 			forward = forwardCurve.getForward(model,fixingDate);
-
-		double discountFactorFixingDate		= fixingDate > evaluationTime ? discountCurve.getDiscountFactor(model, fixingDate) : 0.0;
+		else
+			throw new IllegalArgumentException("No forward curve " + forwardCurveName + " found in the model");
+		
+		double periodStartDate = schedule.getPeriodStart(0);
+		double discountFactorPeriodStartDate = periodStartDate >= evaluationTime ? discountCurve.getDiscountFactor(model, periodStartDate) : 0.0;
 		
 		// Valuation of the market FRA for payer and receiver direction, neglecting convexity adjustment
 		double notional = isPayer ? 1.0 : -1.0;
-
-		return notional * (forward - rate) / (1.0 + forward * periodLength) * discountFactorFixingDate * periodLength;
+		double periodLength = schedule.getPeriodLength(0);
+		return notional * (forward - rate) / (1.0 + forward * periodLength) * discountFactorPeriodStartDate * periodLength;
 	}
 
 	/**

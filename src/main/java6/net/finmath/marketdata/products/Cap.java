@@ -147,7 +147,7 @@ public class Cap extends AbstractAnalyticProduct {
 				if(fixingDate != paymentDate)
 					forward			+= (discountCurveForForward.getDiscountFactor(fixingDate) / discountCurveForForward.getDiscountFactor(paymentDate) - 1.0) / (paymentDate-fixingDate);
 			}
-			double discountFactor	= paymentDate > evaluationTime ? discountCurve.getDiscountFactor(model, paymentDate) : 0.0;
+			double discountFactor	= paymentDate >= evaluationTime ? discountCurve.getDiscountFactor(model, paymentDate) : 0.0;
 			double payoffUnit = discountFactor * periodLength;
 
 			double effektiveStrike = strike;

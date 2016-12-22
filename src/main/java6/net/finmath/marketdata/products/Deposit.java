@@ -41,26 +41,25 @@ public class Deposit  extends AbstractAnalyticProduct implements AnalyticProduct
 		this.discountCurveName = discountCurveName;
 
 		// Check schedule
-		if(schedule.getNumberOfPeriods() > 1) throw new IllegalArgumentException("Number of periods has to be 1: Change frequency to 'tenor'!");
+		if(schedule.getNumberOfPeriods() > 1) 
+			throw new IllegalArgumentException("Number of periods (" + schedule.getNumberOfPeriods() + ") has to be 1: Change frequency to 'tenor'!");
 	}
 
 	@Override
 	public double getValue(double evaluationTime, AnalyticModelInterface model) {
 		// Check for discount curve
 		DiscountCurveInterface discountCurve = model.getDiscountCurve(discountCurveName);		
-		if(discountCurve == null) {
+		if(discountCurve == null)
 			throw new IllegalArgumentException("No curve of the name " + discountCurveName + " and type DiscountCurveInterface was found in the model.");
-		}
 
-		double fixingDate	= schedule.getFixing(0);
-		double maturity		= schedule.getPayment(0);
-
+		double startDate	= schedule.getPeriodStart(0);
+		double paymentDate	= schedule.getPayment(0);
 		double periodLength = schedule.getPeriodLength(0);
-
-		double discountFactor = discountCurve.getDiscountFactor(model, maturity);
-		double discountFactorFixing = discountCurve.getDiscountFactor(model, fixingDate);
-
-		return discountFactor*(1.0 + rate*periodLength) - discountFactorFixing;
+		
+		double discountFactorStart	 	= startDate >= evaluationTime ? discountCurve.getDiscountFactor(model, startDate) : 0.0;
+		double discountFactorPayment 	= paymentDate >= evaluationTime ? discountCurve.getDiscountFactor(model, paymentDate) : 0.0;
+		
+		return discountFactorPayment*(1.0 + rate*periodLength) - discountFactorStart;
 	}
 
 	/**
@@ -77,14 +76,14 @@ public class Deposit  extends AbstractAnalyticProduct implements AnalyticProduct
 			throw new IllegalArgumentException("No curve of the name " + discountCurveName + " and type DiscountCurveInterface was found in the model.");
 		}
 
-		double fixingDate = schedule.getFixing(0);
-		double maturity = schedule.getPayment(0);
+		double startDate 	= schedule.getPeriodStart(0);
+		double paymentDate 	= schedule.getPayment(0);
 		double periodLength = schedule.getPeriodLength(0);
 
-		double discountFactor = discountCurve.getDiscountFactor(model, maturity);
-		double discountFactorFixing = discountCurve.getDiscountFactor(model, fixingDate);
+		double discountFactorStart = discountCurve.getDiscountFactor(model, startDate);
+		double discountFactorPayment = discountCurve.getDiscountFactor(model, paymentDate);
 
-		return (discountFactorFixing - discountFactor)/periodLength;
+		return (discountFactorStart/discountFactorPayment-1)/periodLength;
 	}
 
 	public ScheduleInterface getSchedule() {

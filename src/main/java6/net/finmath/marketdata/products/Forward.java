@@ -72,7 +72,7 @@ public class Forward extends AbstractAnalyticProduct implements AnalyticProductI
 			forward			+= (discountCurveForForward.getDiscountFactor(maturity) / discountCurveForForward.getDiscountFactor(maturity+paymentOffset) - 1.0) / paymentOffset;
 		}
 
-		double discountFactor	= maturity+paymentOffset > evaluationTime ? discountCurve.getDiscountFactor(model, maturity+paymentOffset) : 0.0;
+		double discountFactor	= maturity+paymentOffset >= evaluationTime ? discountCurve.getDiscountFactor(model, maturity+paymentOffset) : 0.0;
 
 		return forward * discountFactor / discountCurve.getDiscountFactor(model, evaluationTime);
 	}
