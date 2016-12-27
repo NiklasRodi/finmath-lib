@@ -78,62 +78,49 @@ public class SwapLeg extends AbstractAnalyticProduct implements AnalyticProductI
 		if(discountCurveForNotionalReset == null)
 			throw new IllegalArgumentException("No discount curve with name '" + discountCurveForNotionalResetName + "' (used to calculate resettable notional) was found in the model.");
 		
-		ForwardCurveInterface	forwardCurve	= model.getForwardCurve(forwardCurveName);
-		DiscountCurveInterface	discountCurveForForward = null;
-		if(forwardCurve == null && forwardCurveName != null && forwardCurveName.length() > 0) {
-			// User might like to get forward from discount curve.
-			discountCurveForForward	= model.getDiscountCurve(forwardCurveName);
-
-			if(discountCurveForForward == null) {
-				// User specified a name for the forward curve, but no curve was found.
-				throw new IllegalArgumentException("No curve of the name " + forwardCurveName + " was found in the model.");
-			}
-		}
-
+		ForwardCurveInterface forwardCurve = model.getForwardCurve(forwardCurveName);
+		double firstPeriodStartDate	= legSchedule.getPeriodStart(0);
 		double value = 0.0;
-		for(int periodIndex=0; periodIndex<legSchedule.getNumberOfPeriods(); periodIndex++) {
-			double fixingDate		= legSchedule.getFixing(periodIndex);
-			double periodStartDate	= legSchedule.getPeriodStart(periodIndex);
-			double periodEndDate	= legSchedule.getPeriodEnd(periodIndex);
-			double paymentDate		= legSchedule.getPayment(periodIndex);
-			double periodLength		= legSchedule.getPeriodLength(periodIndex);
-
-			/*
-			 * We do not count empty periods.
-			 * Since empty periods are an indication for a ill-specified
-			 * product, it might be reasonable to throw an
-			 * illegal argument exception instead.
-			 */
-			if(periodLength == 0) continue;
-
-			double forward		= spread;
-			if(forwardCurve != null) {
-				forward += forwardCurve.getForward(model, fixingDate);
-				//double periodStartDate	= legSchedule.getPeriodStart(periodIndex);
-				//double periodEndDate	= legSchedule.getPeriodEnd(periodIndex);
-				//forward += forwardCurve.getForward(model, fixingDate, periodEndDate-periodStartDate); // if forwardCurve=forwardCurveFromDiscountCurve then this takes the swapPeriod as the liborPeriod and there may be small differences. Note that getForward(model, fixingDate) should be the prefered solution 
-			}
-			else if(discountCurveForForward != null) {
-				/*
-				 * Classical single curve case: using a discount curve as a forward curve.
-				 * This is only implemented for demonstration purposes (an exception would also be appropriate :-)
-				 */
-				if(fixingDate != paymentDate)
-					forward			+= (discountCurveForForward.getDiscountFactor(fixingDate) / discountCurveForForward.getDiscountFactor(paymentDate) - 1.0) / (paymentDate-fixingDate);
-			}
-
-			double firstPeriodStartDate	= legSchedule.getPeriodStart(0);
-			// note that notional = 1 if discountCurveForNotionalReset = discountCurve
-			double notional = (discountCurveForNotionalReset.getDiscountFactor(model,periodStartDate)/discountCurveForNotionalReset.getDiscountFactor(model,firstPeriodStartDate)) / (discountCurve.getDiscountFactor(model,periodStartDate)/discountCurve.getDiscountFactor(model,firstPeriodStartDate));
-			double discountFactorPaymentDate = paymentDate >= evaluationTime ? discountCurve.getDiscountFactor(model, paymentDate) : 0.0;
-			value += notional * forward * periodLength * discountFactorPaymentDate;
-
-			if(isNotionalExchanged) {
-				value -= periodStartDate >= evaluationTime ? discountCurve.getDiscountFactor(model, periodStartDate) : 0.0;
-				value += periodEndDate >= evaluationTime ? discountCurve.getDiscountFactor(model, periodEndDate) : 0.0;		
+		// implement classical single curve formula
+		if(forwardCurveName != null && (discountCurveName.equals(forwardCurveName) || (forwardCurve!=null && discountCurveName.equals(forwardCurve.getBaseDiscountCurveName())))) {
+			if(spread!=0 || isNotionalExchanged)
+				throw new IllegalArgumentException((spread==0?"":("spread = " + spread + "!=0 ")) + (isNotionalExchanged?", isNotionalExchanged":"") + " -> not implemented for singleCurve formulas");
+			double lastPeriodEndDate	= legSchedule.getPeriodEnd(legSchedule.getNumberOfPeriods()-1);
+			double lastPaymentDate		= legSchedule.getPayment(legSchedule.getNumberOfPeriods()-1);
+			// use 0vol-approximation in case lastPaymentDate != lastPeriodEndDate
+			value = discountCurve.getDiscountFactor(model, firstPeriodStartDate)*discountCurve.getDiscountFactor(model, lastPaymentDate)/discountCurve.getDiscountFactor(model, lastPeriodEndDate)-discountCurve.getDiscountFactor(model, lastPaymentDate);
+		} else {
+			if(forwardCurve == null && forwardCurveName != null && forwardCurveName.length() > 0)
+				throw new IllegalArgumentException("No forward curve with name '" + forwardCurveName + "' was found in the model.");
+			
+			for(int periodIndex=0; periodIndex<legSchedule.getNumberOfPeriods(); periodIndex++) {
+				double periodStartDate	= legSchedule.getPeriodStart(periodIndex);
+				double periodEndDate	= legSchedule.getPeriodEnd(periodIndex);
+				double paymentDate 		= legSchedule.getPayment(periodIndex);
+				double periodLength		= legSchedule.getPeriodLength(periodIndex);
+				// empty period is interpreted as misspecification
+				if(periodLength == 0)
+					throw new IllegalArgumentException(periodIndex + "th period of swapLeg is empty.");
+	
+				double forward = spread;
+				if(forwardCurve != null) {
+					double fixingDate = legSchedule.getFixing(periodIndex);
+					//forward += forwardCurve.getForward(model, fixingDate);
+					forward += forwardCurve.getForward(model, fixingDate, periodEndDate-periodStartDate); // if forwardCurve=forwardCurveFromDiscountCurve then this takes the swapPeriod as the liborPeriod and there may be small differences. Note that getForward(model, fixingDate) should be the prefered solution 
+				}
+				
+				// note that notional = 1 if discountCurveForNotionalReset = discountCurve
+				double notional = (discountCurveForNotionalReset.getDiscountFactor(model,periodStartDate)/discountCurveForNotionalReset.getDiscountFactor(model,firstPeriodStartDate)) / (discountCurve.getDiscountFactor(model,periodStartDate)/discountCurve.getDiscountFactor(model,firstPeriodStartDate));
+				double discountFactorPaymentDate = paymentDate >= evaluationTime ? discountCurve.getDiscountFactor(model, paymentDate) : 0.0;
+				value += notional * forward * periodLength * discountFactorPaymentDate;
+				
+				if(isNotionalExchanged) {
+					value -= periodStartDate >= evaluationTime ? discountCurve.getDiscountFactor(model, periodStartDate) : 0.0;
+					value += periodEndDate >= evaluationTime ? discountCurve.getDiscountFactor(model, periodEndDate) : 0.0;		
+				}
 			}
 		}
-
+		
 		return value / discountCurve.getDiscountFactor(model, evaluationTime);
 	}
 

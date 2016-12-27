@@ -19,8 +19,8 @@ import net.finmath.marketdata.model.AnalyticModel;
 import net.finmath.marketdata.model.AnalyticModelInterface;
 import net.finmath.marketdata.model.curves.CurveInterface;
 import net.finmath.marketdata.model.curves.DiscountCurve;
+import net.finmath.marketdata.model.curves.DiscountCurveFromForwardCurve;
 import net.finmath.marketdata.model.curves.DiscountCurveInterface;
-import net.finmath.marketdata.model.curves.ForwardCurve;
 import net.finmath.marketdata.model.curves.ForwardCurveFromDiscountCurve;
 import net.finmath.marketdata.model.curves.ForwardCurveInterface;
 import net.finmath.marketdata.products.AnalyticProductInterface;
@@ -32,6 +32,8 @@ import net.finmath.optimizer.SolverException;
 import net.finmath.time.RegularSchedule;
 import net.finmath.time.ScheduleInterface;
 import net.finmath.time.TimeDiscretization;
+import net.finmath.time.businessdaycalendar.BusinessdayCalendarExcludingTARGETHolidays;
+import net.finmath.time.businessdaycalendar.BusinessdayCalendarInterface;
 
 /**
  * Generate a collection of calibrated curves (discount curves, forward curves)
@@ -88,9 +90,10 @@ import net.finmath.time.TimeDiscretization;
 public class CalibratedCurves {
 
 	private static final boolean isUseForwardCurve;
+	private static final boolean isRestrictiveOnCurveConstruction;
 	static {
-		// Default value is true
 		isUseForwardCurve = Boolean.parseBoolean(System.getProperty("net.finmath.marketdata.calibration.CalibratedCurves.isUseForwardCurve","true"));
+		isRestrictiveOnCurveConstruction = Boolean.parseBoolean(System.getProperty("net.finmath.marketdata.calibration.CalibratedCurves.isRestrictiveOnCurveConstruction","false"));
 	}
 
 	/**
@@ -429,7 +432,7 @@ public class CalibratedCurves {
 		String discountCurveReceiverName = calibrationSpec.discountCurveReceiverName;
 		discountCurveReceiverName = createDiscountCurve(discountCurveReceiverName);
 		String forwardCurveReceiverName = calibrationSpec.forwardCurveReceiverName;
-		forwardCurveReceiverName = createForwardCurve(calibrationSpec.swapTenorDefinitionReceiver, forwardCurveReceiverName);
+		forwardCurveReceiverName = createForwardCurve(calibrationSpec.swapTenorDefinitionReceiver, forwardCurveReceiverName, discountCurveReceiverName);
 
 		ScheduleInterface tenorReceiver = calibrationSpec.swapTenorDefinitionReceiver;
 		ScheduleInterface tenorPayer	= calibrationSpec.swapTenorDefinitionPayer;
@@ -449,7 +452,7 @@ public class CalibratedCurves {
 			String discountCurvePayerName = calibrationSpec.discountCurvePayerName;
 			discountCurvePayerName = createDiscountCurve(discountCurvePayerName);
 			String forwardCurvePayerName = calibrationSpec.forwardCurvePayerName;
-			forwardCurvePayerName	= createForwardCurve(calibrationSpec.swapTenorDefinitionPayer, forwardCurvePayerName);
+			forwardCurvePayerName	= createForwardCurve(calibrationSpec.swapTenorDefinitionPayer, forwardCurvePayerName, discountCurvePayerName);
 			if(calibrationSpec.type.toLowerCase().equals("swap")) {
 				product = new Swap(tenorReceiver, forwardCurveReceiverName, calibrationSpec.spreadReceiver, discountCurveReceiverName, tenorPayer, forwardCurvePayerName, calibrationSpec.spreadPayer, discountCurvePayerName, false);
 			}
@@ -710,12 +713,30 @@ public class CalibratedCurves {
 	 * @return The name of the discount factor curve associated with the given name.
 	 */
 	private String createDiscountCurve(String discountCurveName) {
-		DiscountCurveInterface discountCurve	= model.getDiscountCurve(discountCurveName);
-		if(discountCurve == null) {
-			discountCurve = DiscountCurve.createDiscountCurveFromDiscountFactors(discountCurveName, new double[] { 0.0 }, new double[] { 1.0 });
-			model = model.addCurves(discountCurve);
+		CurveInterface	curve = model.getCurve(discountCurveName); // note that this may be a forward curve
+		if(curve == null)
+			throw new IllegalArgumentException("Cannot create discountCurve " + discountCurveName + " as no such curve was found in the model (not even as a forward curve). Initialize it first.");
+			
+		CurveInterface	discountCurve = null;
+		if(DiscountCurveInterface.class.isInstance(curve)) {
+			discountCurve = curve;
+		} else if(ForwardCurveInterface.class.isInstance(curve)) {
+			if(isRestrictiveOnCurveConstruction) {
+				throw new IllegalArgumentException("Cannot create discountCurve " + discountCurveName + " as this is a forward curve (and isRestrictiveOnCurveConstruction=" + isRestrictiveOnCurveConstruction + ")");
+			} else {
+				// check whether given curve is in fact a forwardCurve for which I have a discountCurveFromForwardCurve in the model
+				String discountCurveFromForwardCurveName = discountCurveName+net.finmath.marketdata.model.curves.DiscountCurveFromForwardCurve.nameSuffix;
+				discountCurve = model.getDiscountCurve(discountCurveFromForwardCurveName);
+				if(discountCurve==null) {
+					// otherwise create a new discount curve
+					discountCurve = DiscountCurve.createDiscountCurveFromDiscountFactors(discountCurveName, new double[] { 0.0 }, new double[] { 1.0 });
+					model = model.addCurves(discountCurve);
+				}
+			}
+		} else {
+			throw new IllegalArgumentException("Unhandled type. Curve " + curve.getName() + " is neither discount nor forward curve");
 		}
-
+		
 		return discountCurve.getName();
 	}
 
@@ -726,52 +747,51 @@ public class CalibratedCurves {
 	 * @param forwardCurveName The name of the forward curve to create.
 	 * @return The name of the forward curve associated with the given name.
 	 */
-	private String createForwardCurve(ScheduleInterface swapTenorDefinition, String forwardCurveName) {
-
-		// Temporary "hack" - we try to infer index maturity codes from curve name.
-		String indexMaturityCode = null;
-		if(forwardCurveName.contains("12M") || forwardCurveName.contains("_12M") || forwardCurveName.contains("-12M") || forwardCurveName.contains(" 12M"))	indexMaturityCode = "12M";
-		if(forwardCurveName.contains("1M") || forwardCurveName.contains("_1M")	|| forwardCurveName.contains("-1M")	|| forwardCurveName.contains(" 1M"))	indexMaturityCode = "1M";
-		if(forwardCurveName.contains("6M") || forwardCurveName.contains("_6M")	|| forwardCurveName.contains("-6M")	|| forwardCurveName.contains(" 6M"))	indexMaturityCode = "6M";
-		if(forwardCurveName.contains("3M") || forwardCurveName.contains("_3M") || forwardCurveName.contains("-3M") || forwardCurveName.contains(" 3M"))	indexMaturityCode = "3M";
-
+	private String createForwardCurve(ScheduleInterface swapTenorDefinition, String forwardCurveName, String discountCurveName) {
 		if(forwardCurveName == null || forwardCurveName.isEmpty()) return null;
-
-		// Check if the curves exists, if not create it
-		CurveInterface	curve = model.getCurve(forwardCurveName);
-
+		
+		CurveInterface curve = model.getCurve(forwardCurveName); // note that this may be a discount curve
+		if(curve == null) 
+			throw new IllegalArgumentException("Cannot create forwardCurve " + forwardCurveName + " as no such curve was found in the model (not even as a discount curve). Initialize it first.");
+		
 		CurveInterface	forwardCurve = null;
-		if(curve == null) {
-			// Create a new forward curve
-			if(isUseForwardCurve) {
-				curve = new ForwardCurve(forwardCurveName, swapTenorDefinition.getReferenceDate(), indexMaturityCode, ForwardCurve.InterpolationEntityForward.FORWARD, null);
+		if(ForwardCurveInterface.class.isInstance(curve)) {
+			forwardCurve = curve;
+		} else if(DiscountCurveInterface.class.isInstance(curve)) {
+			if(isRestrictiveOnCurveConstruction) {
+				throw new IllegalArgumentException("Cannot create forwardCurve " + forwardCurveName + " as this is a discount curve (and isRestrictiveOnCurveConstruction=" + isRestrictiveOnCurveConstruction + ")");
+			} else {
+				// check whether given curve is in fact a forwardCurve for which I have a discountCurveFromForwardCurve in the model
+				String forwardCurveFromDiscountCurveName = forwardCurveName+net.finmath.marketdata.model.curves.ForwardCurveFromDiscountCurve.nameSuffix;
+				forwardCurve = model.getForwardCurve(forwardCurveFromDiscountCurveName);
+				if(forwardCurve==null) {
+					// If the specified forward curve exits as a discount curve, we generate a forward curve by wrapping the discount curve, i.e. calculate the forwards from discount factors using the formula (df(T)/df(T+Delta T)-1) / dcf
+					// Temporary "hack" - we try to infer index maturity codes from curve name
+					// Note that this does not work for OIS curves
+					String indexMaturityCode = null;
+					if(forwardCurveName.contains("12M") || forwardCurveName.contains("_12M") || forwardCurveName.contains("-12M") || forwardCurveName.contains(" 12M"))	indexMaturityCode = "12M";
+					if(forwardCurveName.contains("9M") || forwardCurveName.contains("_1M")	|| forwardCurveName.contains("-1M")	|| forwardCurveName.contains(" 1M"))	indexMaturityCode = "1M";
+					if(forwardCurveName.contains("6M") || forwardCurveName.contains("_6M")	|| forwardCurveName.contains("-6M")	|| forwardCurveName.contains(" 6M"))	indexMaturityCode = "6M";
+					if(forwardCurveName.contains("3M") || forwardCurveName.contains("_3M") || forwardCurveName.contains("-3M") || forwardCurveName.contains(" 3M"))	indexMaturityCode = "3M";
+					
+					// cannot impose this restriction because of OIS curves
+					//if(indexMaturityCode!=null)
+					//	throw new IllegalArgumentException("Cannot create forward curve form discount curve " + curve.getName() + " without knowing its indexMaturityCode.");
+					
+					// forwards from pseudo discount factors are always assumed to be ACT/360 and modified following based on the target calendar
+					double daycountScaling = 365.0/360.0;
+					BusinessdayCalendarInterface busDayCalendar = new BusinessdayCalendarExcludingTARGETHolidays();
+					BusinessdayCalendarInterface.DateRollConvention dateRollConvention = BusinessdayCalendarInterface.DateRollConvention.MODIFIED_FOLLOWING;
+					forwardCurve = new ForwardCurveFromDiscountCurve(curve.getName(), curve.getName(), discountCurveName, swapTenorDefinition.getReferenceDate(), indexMaturityCode, 
+							busDayCalendar, dateRollConvention, daycountScaling, 0.0);
+				}
 			}
-			else {
-				// Alternative: Model the forward curve through an underlying discount curve.
-				curve = DiscountCurve.createDiscountCurveFromDiscountFactors(forwardCurveName, new double[] { 0.0 }, new double[] { 1.0 });
-				model = model.addCurves(curve);
-			}
-		}
-
-		// Check if the curve is a discount curve, if yes - create a forward curve wrapper.
-		if(DiscountCurveInterface.class.isInstance(curve)) {
-			/*
-			 *  If the specified forward curve exits as a discount curve, we generate a forward curve
-			 *  by wrapping the discount curve and calculating the
-			 *  forward from discount factors using the formula (df(T)/df(T+Delta T) - 1) / Delta T).
-			 *  
-			 *  If no index maturity is used, the forward curve is interpreted "single curve", i.e.
-			 *  T+Delta T is always the payment.
-			 */
-			forwardCurve = new ForwardCurveFromDiscountCurve(curve.getName(), swapTenorDefinition.getReferenceDate(), indexMaturityCode);
 		}
 		else {
-			// Use a given forward curve
-			forwardCurve = curve;
+			throw new IllegalArgumentException("Unhandled type. Curve " + curve.getName() + " is neither discount nor forward curve");
 		}
-
+		
 		model = model.addCurves(forwardCurve);
-
 		return forwardCurve.getName();
 	}
 }

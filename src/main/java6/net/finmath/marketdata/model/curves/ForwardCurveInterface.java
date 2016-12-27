@@ -47,4 +47,9 @@ public interface ForwardCurveInterface extends CurveInterface {
 	 * @return The payment offset associated with this forward curve.
 	 */
     double getPaymentOffset(double fixingTime);
+    
+    /**
+     * @return getBaseDiscountCurveName if forwardCurve is ForwardCurveFromDiscountCurve, return null otherwise
+     */
+    String getBaseDiscountCurveName();
 }

@@ -144,4 +144,9 @@ public abstract class AbstractForwardCurve extends Curve implements ForwardCurve
 
 		return values;
 	}
+	
+	@Override
+	public String getBaseDiscountCurveName() {
+		return null;
+	}
 }

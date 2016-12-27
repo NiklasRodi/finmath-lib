@@ -134,4 +134,9 @@ public class ForwardCurveFromDiscountCurve extends AbstractForwardCurve implemen
 		// TODO Auto-generated method stub
 		return null;
 	}
+	
+	@Override
+	public String getBaseDiscountCurveName() {
+		return baseDiscountCurveName;
+	}
 }

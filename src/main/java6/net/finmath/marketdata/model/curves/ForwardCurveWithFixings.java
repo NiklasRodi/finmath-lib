@@ -81,4 +81,9 @@ public class ForwardCurveWithFixings extends PiecewiseCurve implements ForwardCu
 	public ForwardCurveWithFixings clone() throws CloneNotSupportedException {
 		return new ForwardCurveWithFixings((ForwardCurveInterface)getBaseCurve().clone(), (ForwardCurveInterface)getFixedPartCurve(), getFixedPartStartTime(), getFixedPartEndTime());
 	}
+	
+	@Override
+	public String getBaseDiscountCurveName() {
+		return null;
+	}
 }
