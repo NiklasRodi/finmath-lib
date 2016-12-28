@@ -94,29 +94,34 @@ public class SwapLeg extends AbstractAnalyticProduct implements AnalyticProductI
 				throw new IllegalArgumentException("No forward curve with name '" + forwardCurveName + "' was found in the model.");
 			
 			for(int periodIndex=0; periodIndex<legSchedule.getNumberOfPeriods(); periodIndex++) {
-				double periodStartDate	= legSchedule.getPeriodStart(periodIndex);
-				double periodEndDate	= legSchedule.getPeriodEnd(periodIndex);
-				double paymentDate 		= legSchedule.getPayment(periodIndex);
-				double periodLength		= legSchedule.getPeriodLength(periodIndex);
+				double liborFixingDate 		= legSchedule.getFixing(periodIndex);
+				double swapPeriodStartDate	= legSchedule.getPeriodStart(periodIndex);
+				double swapPeriodEndDate	= legSchedule.getPeriodEnd(periodIndex);
+				double paymentDate 			= legSchedule.getPayment(periodIndex);
+				double swapDayCountFraction	= legSchedule.getPeriodLength(periodIndex);
 				// empty period is interpreted as misspecification
-				if(periodLength == 0)
+				if(swapDayCountFraction == 0)
 					throw new IllegalArgumentException(periodIndex + "th period of swapLeg is empty.");
 	
 				double forward = spread;
 				if(forwardCurve != null) {
-					double fixingDate = legSchedule.getFixing(periodIndex);
-					//forward += forwardCurve.getForward(model, fixingDate);
-					forward += forwardCurve.getForward(model, fixingDate, periodEndDate-periodStartDate); // if forwardCurve=forwardCurveFromDiscountCurve then this takes the swapPeriod as the liborPeriod and there may be small differences. Note that getForward(model, fixingDate) should be the prefered solution 
+					/**
+					 * the way the forward is calculated here should go hand in hand with the way it is done in Swap.getForwardSwapRate()
+					 * if forwardCurve is a true forwardCurve then forwardCurve.getForward(model,liborFixingDate) is equal to forwardCurve.getForward(model,liborFixingDate,swapPeriodEndDate-swapPeriodStartDate)
+					 * however, if forwardCurve=forwardCurveFromDiscountCurve then there may be a difference if the swap and the libor period do not coincide. Note that getForward(model,fixingDate) should be the prefered solution
+					 */ 
+					//forward += forwardCurve.getForward(model, liborFixingDate);
+					forward += forwardCurve.getForward(model, liborFixingDate, swapPeriodEndDate-swapPeriodStartDate); 
 				}
 				
 				// note that notional = 1 if discountCurveForNotionalReset = discountCurve
-				double notional = (discountCurveForNotionalReset.getDiscountFactor(model,periodStartDate)/discountCurveForNotionalReset.getDiscountFactor(model,firstPeriodStartDate)) / (discountCurve.getDiscountFactor(model,periodStartDate)/discountCurve.getDiscountFactor(model,firstPeriodStartDate));
+				double notional = (discountCurveForNotionalReset.getDiscountFactor(model,swapPeriodStartDate)/discountCurveForNotionalReset.getDiscountFactor(model,firstPeriodStartDate)) / (discountCurve.getDiscountFactor(model,swapPeriodStartDate)/discountCurve.getDiscountFactor(model,firstPeriodStartDate));
 				double discountFactorPaymentDate = paymentDate >= evaluationTime ? discountCurve.getDiscountFactor(model, paymentDate) : 0.0;
-				value += notional * forward * periodLength * discountFactorPaymentDate;
+				value += notional * forward * swapDayCountFraction * discountFactorPaymentDate;
 				
 				if(isNotionalExchanged) {
-					value -= periodStartDate >= evaluationTime ? discountCurve.getDiscountFactor(model, periodStartDate) : 0.0;
-					value += periodEndDate >= evaluationTime ? discountCurve.getDiscountFactor(model, periodEndDate) : 0.0;		
+					value -= swapPeriodStartDate >= evaluationTime ? discountCurve.getDiscountFactor(model, swapPeriodStartDate) : 0.0;
+					value += swapPeriodEndDate >= evaluationTime ? discountCurve.getDiscountFactor(model, swapPeriodEndDate) : 0.0;		
 				}
 			}
 		}

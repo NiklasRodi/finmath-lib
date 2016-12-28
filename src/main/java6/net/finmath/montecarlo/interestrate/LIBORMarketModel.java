@@ -515,7 +515,7 @@ public class LIBORMarketModel extends AbstractModel implements LIBORMarketModelI
 
 				// Swaptions swap rate
 				ScheduleInterface swapTenor = new RegularSchedule(new TimeDiscretization(swapTenorTimes));
-				double swaprate = Swap.getForwardSwapRate(swapTenor, swapTenor, forwardCurve, null);
+				double swaprate = Swap.getForwardSwapRate(swapTenor, swapTenor, forwardCurve);
 
 				// Set swap rates for each period
 				double[] swaprates        = new double[numberOfPeriods];

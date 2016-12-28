@@ -123,37 +123,57 @@ public class Swap extends AbstractAnalyticProduct implements AnalyticProductInte
 		return getForwardSwapRate(new RegularSchedule(fixTenor), new RegularSchedule(floatTenor), forwardCurve);
 	}
 
-	static public double getForwardSwapRate(TimeDiscretizationInterface fixTenor, TimeDiscretizationInterface floatTenor, ForwardCurveInterface forwardCurve, DiscountCurveInterface discountCurve) {
-		AnalyticModel model = null;
-		if(discountCurve != null) {
-			model			= new AnalyticModel(new CurveInterface[] { forwardCurve, discountCurve });
-		}
-		return getForwardSwapRate(new RegularSchedule(fixTenor), new RegularSchedule(floatTenor), forwardCurve, model);
-	}
-
 	static public double getForwardSwapRate(ScheduleInterface fixSchedule, ScheduleInterface floatSchedule, ForwardCurveInterface forwardCurve) {
-		return getForwardSwapRate(fixSchedule, floatSchedule, forwardCurve, null);
+		if(forwardCurve==null)
+			throw new IllegalArgumentException("forwardCurve==null.");
+		// create discount curve wrapper around forward curve
+		DiscountCurveInterface discountCurve = new DiscountCurveFromForwardCurve(forwardCurve.getName());
+		AnalyticModelInterface model = new AnalyticModel(new CurveInterface[] {forwardCurve,discountCurve});
+		return getForwardSwapRate(fixSchedule, floatSchedule, forwardCurve.getName(), discountCurve.getName(), model);
+	}
+	
+	static public double getForwardSwapRate(TimeDiscretizationInterface fixTenor, TimeDiscretizationInterface floatTenor, ForwardCurveInterface forwardCurve, DiscountCurveInterface discountCurve) {
+		if(forwardCurve==null)
+			throw new IllegalArgumentException("forwardCurve==null");
+		if(discountCurve==null)
+			throw new IllegalArgumentException("discountCurve==null");
+		AnalyticModel model = new AnalyticModel(new CurveInterface[] {forwardCurve,discountCurve});
+		return getForwardSwapRate(new RegularSchedule(fixTenor), new RegularSchedule(floatTenor), forwardCurve.getName(), discountCurve.getName(), model);
 	}
 
-	static public double getForwardSwapRate(ScheduleInterface fixSchedule, ScheduleInterface floatSchedule, ForwardCurveInterface forwardCurve, AnalyticModelInterface model) {
-		DiscountCurveInterface discountCurve = model == null ? null : model.getDiscountCurve(forwardCurve.getDiscountCurveName());
-		if(discountCurve == null) {
-			discountCurve	= new DiscountCurveFromForwardCurve(forwardCurve.getName());
-			model			= new AnalyticModel(new CurveInterface[] { forwardCurve, discountCurve });
-		}
+	static public double getForwardSwapRate(ScheduleInterface fixSchedule, ScheduleInterface floatSchedule, String forwardCurveName, String discountCurveName, AnalyticModelInterface model) {
+		// note that this cannot be simplified to getForwardSwapRate(fixSchedule,floatSchedule,forwardCurve,discountCurve) as I potentially need the model to call forwardCurve.getForward()
+		if(model==null)
+			throw new IllegalArgumentException("model==null");
+		
+		ForwardCurveInterface forwardCurve = model.getForwardCurve(forwardCurveName);
+		if(forwardCurve==null)
+			throw new IllegalArgumentException("Forward curve " + forwardCurveName + " not found in the model.");
+		
+		DiscountCurveInterface discountCurve = model.getDiscountCurve(discountCurveName);
+		if(discountCurve == null)
+			throw new IllegalArgumentException("Discount curve " + discountCurveName + " not found in the model.");
 
 		double evaluationTime = fixSchedule.getFixing(0);	// Consider all values
-		double swapAnnuity	= SwapAnnuity.getSwapAnnuity(evaluationTime, fixSchedule, discountCurve, model);
+		double swapAnnuity	= SwapAnnuity.getSwapAnnuity(evaluationTime, fixSchedule, discountCurveName, model);
 
 		double floatLeg = 0;
 		for(int periodIndex=0; periodIndex<floatSchedule.getNumberOfPeriods(); periodIndex++) {
-			double fixing			= floatSchedule.getFixing(periodIndex);
+			double fixingDate		= floatSchedule.getFixing(periodIndex);
+			double periodStartDate	= floatSchedule.getPeriodStart(periodIndex);
+			double periodEndDate	= floatSchedule.getPeriodEnd(periodIndex);
 			double payment			= floatSchedule.getPayment(periodIndex);
-			double periodLength		= floatSchedule.getPeriodLength(periodIndex);
-
-			double forward			= forwardCurve.getForward(model, fixing);
 			double discountFactor	= discountCurve.getDiscountFactor(model, payment);
-
+			
+			/**
+			 * the way the forward is calculated here should go hand in hand with the way it is done in SwapLeg.getValue()
+			 * if forwardCurve is a true forwardCurve then forwardCurve.getForward(model,liborFixingDate) is equal to forwardCurve.getForward(model,liborFixingDate,swapPeriodEndDate-swapPeriodStartDate)
+			 * however, if forwardCurve=forwardCurveFromDiscountCurve then there may be a difference if the swap and the libor period do not coincide. Note that getForward(model,fixingDate) should be the prefered solution
+			 */ 
+			//double forward			= forwardCurve.getForward(model, fixingDate);
+			double forward			= forwardCurve.getForward(model, fixingDate, periodEndDate-periodStartDate);
+			
+			double periodLength		= floatSchedule.getPeriodLength(periodIndex);
 			floatLeg += forward * periodLength * discountFactor;
 		}
 
@@ -161,7 +181,7 @@ public class Swap extends AbstractAnalyticProduct implements AnalyticProductInte
 
 		return valueFloatLeg / swapAnnuity;
 	}
-
+	
 	/**
 	 * Return the receiver leg of the swap, i.e. the leg who's value is added to the swap value.
 	 * 
