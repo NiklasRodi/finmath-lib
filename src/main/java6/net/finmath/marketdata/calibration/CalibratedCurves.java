@@ -728,8 +728,8 @@ public class CalibratedCurves {
 				String discountCurveFromForwardCurveName = discountCurveName+net.finmath.marketdata.model.curves.DiscountCurveFromForwardCurve.nameSuffix;
 				discountCurve = model.getDiscountCurve(discountCurveFromForwardCurveName);
 				if(discountCurve==null) {
-					// otherwise create a new discount curve
-					discountCurve = DiscountCurve.createDiscountCurveFromDiscountFactors(discountCurveName, new double[] { 0.0 }, new double[] { 1.0 });
+					// otherwise create discountCurveFromForwardCurve
+					discountCurve = new DiscountCurveFromForwardCurve(curve.getName());
 					model = model.addCurves(discountCurve);
 				}
 			}

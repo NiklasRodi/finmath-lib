@@ -119,9 +119,9 @@ public class AnalyticModel implements AnalyticModelInterface, Cloneable {
 	@Override
 	public DiscountCurveInterface getDiscountCurve(String discountCurveName) {
 		DiscountCurveInterface discountCurve = null;
-		CurveInterface curveForDiscountingCurve			= getCurve(discountCurveName);
-		if(DiscountCurveInterface.class.isInstance(curveForDiscountingCurve)) {
-			discountCurve	= (DiscountCurveInterface)curveForDiscountingCurve;
+		CurveInterface curve = getCurve(discountCurveName);
+		if(DiscountCurveInterface.class.isInstance(curve)) {
+			discountCurve	= (DiscountCurveInterface)curve;
 		}
 		return discountCurve;
 	}
