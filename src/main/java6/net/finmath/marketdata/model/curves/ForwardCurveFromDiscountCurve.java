@@ -92,7 +92,7 @@ public class ForwardCurveFromDiscountCurve extends AbstractForwardCurve implemen
 	{
 		double paymentOffset = getPaymentOffset(fixingTime+periodOffset);
 		if(Double.isNaN(paymentOffset))
-			throw new IllegalArgumentException("Requesting forward but paymentOffset not specified.");
+			throw new IllegalArgumentException(this.getName() + ": Requesting forward but paymentOffset not specified.");
 		
 		return getForward(model, fixingTime, paymentOffset);
 	}
@@ -105,7 +105,7 @@ public class ForwardCurveFromDiscountCurve extends AbstractForwardCurve implemen
 	{
 		DiscountCurveInterface baseDiscountCurve = model.getDiscountCurve(baseDiscountCurveName); // do not use discountCurveName here (usually this is an OIS curve)
 		if(baseDiscountCurve==null)
-			throw new IllegalArgumentException("baseDiscountCurve " + baseDiscountCurveName + " not found in the model");
+			throw new IllegalArgumentException(this.getName() + ": baseDiscountCurve " + baseDiscountCurveName + " not found in the model");
 		
 		double daycount = paymentOffset * daycountScaling;
 		// note that the following is not correct if fixing != periodStart

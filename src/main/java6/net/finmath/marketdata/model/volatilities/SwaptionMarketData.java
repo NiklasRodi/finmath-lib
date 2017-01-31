@@ -13,8 +13,7 @@ import net.finmath.time.TimeDiscretizationInterface;
 /**
  * Simple swaption market data class.
  * 
- * The class does currently not provide a surface interpolation
- * like SABR.
+ * The class does currently not provide a surface interpolation like SABR.
  * 
  * This will be added in a future version.
  * 
@@ -83,9 +82,9 @@ public class SwaptionMarketData implements AbstractSwaptionMarketData {
 		throw new RuntimeException("Method not implemented.");
 	}
 
-	public double getVolatility(double optionMatruity, double tenorLength) {
-		int indexOptionMaturity = optionMaturities.getTimeIndex(optionMatruity);
-		int indexTenorIndex = tenor.getTimeIndex(tenorLength);
+	public double getVolatility(double optionMaturity, double tenorLength) {
+		int indexOptionMaturity = optionMaturities.getTimeIndex(optionMaturity);
+		int indexTenorIndex 	= tenor.getTimeIndex(tenorLength);
 		if(indexOptionMaturity < 0)	throw new IllegalArgumentException("Option maturity not part of data.");
 		if(indexTenorIndex < 0)		throw new IllegalArgumentException("Tenor maturity not part of data.");
 		
@@ -96,12 +95,7 @@ public class SwaptionMarketData implements AbstractSwaptionMarketData {
 	 * @see net.finmath.marketdata.AbstractSwaptionMarketData#getVolatility(double, double, double, double)
 	 */
 	@Override
-    public double getVolatility(double optionMatruity, double tenorLength, double periodLength, double strike) {
-		int indexOptionMaturity = optionMaturities.getTimeIndex(optionMatruity);
-		int indexTenorIndex = tenor.getTimeIndex(tenorLength);
-		if(indexOptionMaturity < 0)	throw new IllegalArgumentException("Option maturity not part of data.");
-		if(indexTenorIndex < 0)		throw new IllegalArgumentException("Tenor maturity not part of data.");
-		
-		return impliedVolatilities[indexOptionMaturity][indexTenorIndex];
+    public double getVolatility(double optionMaturity, double tenorLength, double periodLength, double strike) {
+		return this.getVolatility(optionMaturity, tenorLength);
 	}
 }
