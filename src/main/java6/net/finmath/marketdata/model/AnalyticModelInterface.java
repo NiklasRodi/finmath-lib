@@ -44,14 +44,6 @@ public interface AnalyticModelInterface extends ModelInterface, Cloneable {
 	/**
 	 * Create a new analytic model consisting of a clone of this one together with the given curves added.
 	 * 
-	 * @param curves The set of curves to add.
-	 * @return A new analytic model.
-	 */
-	AnalyticModelInterface addCurves(CurveInterface... curves);
-
-	/**
-	 * Create a new analytic model consisting of a clone of this one together with the given curves added.
-	 * 
 	 * @param curves The list of curves to add.
 	 * @return A new analytic model.
 	 */

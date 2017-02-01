@@ -700,7 +700,7 @@ public class CalibratedCurves {
 					.addPoint(calibrationSpec.calibrationTime, 1.0, true)
 					.build();
 		}
-		model = model.addCurves(calibrationCurve);
+		model = model.addCurve(calibrationCurve.getName(),calibrationCurve);
 		objectsToCalibrate.add(calibrationCurve);
 
 		return calibrationSpec.type;
@@ -730,7 +730,7 @@ public class CalibratedCurves {
 				if(discountCurve==null) {
 					// otherwise create discountCurveFromForwardCurve
 					discountCurve = new DiscountCurveFromForwardCurve(curve.getName());
-					model = model.addCurves(discountCurve);
+					model = model.addCurve(discountCurve.getName(),discountCurve);
 				}
 			}
 		} else {
@@ -791,7 +791,7 @@ public class CalibratedCurves {
 			throw new IllegalArgumentException("Unhandled type. Curve " + curve.getName() + " is neither discount nor forward curve");
 		}
 		
-		model = model.addCurves(forwardCurve);
+		model = model.addCurve(forwardCurve.getName(),forwardCurve);
 		return forwardCurve.getName();
 	}
 }

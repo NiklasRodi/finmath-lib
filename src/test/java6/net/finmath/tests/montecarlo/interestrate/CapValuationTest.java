@@ -192,8 +192,8 @@ public class CapValuationTest {
 
 			// Value analytic
 			AnalyticModelInterface model = new AnalyticModel();
-			model = model.addCurves(forwardCurve);
-			model = model.addCurves(discountCurve);
+			model = model.addCurve(forwardCurve.getName(),forwardCurve);
+			model = model.addCurve(discountCurve.getName(),discountCurve);
 			model = model.addVolatilitySurfaces(capletVol);
 
 			LocalDate startDate = referenceDate.plusMonths(3);

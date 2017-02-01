@@ -7,6 +7,7 @@ package net.finmath.marketdata.model;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -69,29 +70,24 @@ public class AnalyticModel implements AnalyticModelInterface, Cloneable {
 		return curvesMap.keySet();
 	}
 
-	public AnalyticModelInterface addCurve(String name, CurveInterface curve) {
-		AnalyticModel newModel = clone();
-		newModel.curvesMap.put(name, curve);
-		return newModel;
-	}
-
 	public AnalyticModelInterface addCurve(CurveInterface curve) {
-		AnalyticModel newModel = clone();
-		newModel.curvesMap.put(curve.getName(), curve);
-		return newModel;
+		return addCurve(curve.getName(), curve);
 	}
-
-	@Override
-	public AnalyticModelInterface addCurves(CurveInterface... curves) {
-		AnalyticModel newModel = clone();
-		for(CurveInterface curve : curves) newModel.curvesMap.put(curve.getName(), curve);
-		return newModel;
+	
+	public AnalyticModelInterface addCurve(String name, CurveInterface curve) {
+		Set<CurveInterface> curves = new HashSet<CurveInterface>();
+		curves.add(curve);
+		return addCurves(curves);
 	}
 
 	@Override
 	public AnalyticModelInterface addCurves(Set<CurveInterface> curves) {
 		AnalyticModel newModel = clone();
-		for(CurveInterface curve : curves) newModel.curvesMap.put(curve.getName(), curve);
+		for(CurveInterface curve : curves) {
+			//if(newModel.curvesMap.get(curve.getName()) != null)
+			//	throw new IllegalArgumentException("A curve with name " + curve.getName() + " already exists in the model.");
+			newModel.curvesMap.put(curve.getName(), curve);
+		}
 		return newModel;
 	}
 

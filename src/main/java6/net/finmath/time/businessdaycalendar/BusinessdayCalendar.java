@@ -116,21 +116,26 @@ public abstract class BusinessdayCalendar implements BusinessdayCalendarInterfac
 		while(tokenizer.hasMoreTokens()) {
 			String maturityCodeSingle = tokenizer.nextToken();
 			
-			// get unit string (usually the last char but may be last two chars)
-			String unitString = maturityCodeSingle.toLowerCase().substring(maturityCodeSingle.length()-2); 
-			if(!unitString.equals("bd"))
-				unitString = unitString.substring(unitString.length()-1);
+			// get unit identifier (usually last char but may be last two chars)
+			char unitChar;
+			int maturityValue;
+			if(maturityCodeSingle.toLowerCase().substring(maturityCodeSingle.length()-2).equals("bd")) {
+				unitChar = 'b';
+				maturityValue = Integer.valueOf(maturityCodeSingle.substring(0, maturityCodeSingle.length()-2));
+			} else {
+				unitChar = maturityCodeSingle.toLowerCase().charAt(maturityCodeSingle.length()-1);
+				maturityValue = Integer.valueOf(maturityCodeSingle.substring(0, maturityCodeSingle.length()-1));
+			}
 			
-			switch(unitString) {
-			case "d":
+			// note that switch(string) only works since java 6
+			switch(unitChar) {
+			case 'd':
 			{
-				int maturityValue = Integer.valueOf(maturityCodeSingle.substring(0, maturityCodeSingle.length()-1));
 				maturity = maturity.plusDays(maturityValue);
 				break;
 			}
-			case "bd":
+			case 'b':
 			{
-				int maturityValue = Integer.valueOf(maturityCodeSingle.substring(0, maturityCodeSingle.length()-2));
 				boolean isPositiveAdjustment = true;
 				if(maturityValue<0) {
 					isPositiveAdjustment = false;
@@ -142,21 +147,18 @@ public abstract class BusinessdayCalendar implements BusinessdayCalendarInterfac
 				}
 				break;
 			}
-			case "w":
+			case 'w':
 			{
-				int maturityValue = Integer.valueOf(maturityCodeSingle.substring(0, maturityCodeSingle.length()-1));
 				maturity = maturity.plusWeeks(maturityValue);
 				break;
 			}
-			case "m":
-			{
-				int maturityValue = Integer.valueOf(maturityCodeSingle.substring(0, maturityCodeSingle.length()-1));					
+			case 'm':
+			{				
 				maturity = maturity.plusMonths(maturityValue);
 				break;
 			}
-			case "y":
+			case 'y':
 			{
-				int maturityValue = Integer.valueOf(maturityCodeSingle.substring(0, maturityCodeSingle.length()-1));
 				maturity = maturity.plusYears(maturityValue);
 				break;
 			}
