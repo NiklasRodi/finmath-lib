@@ -28,7 +28,7 @@ public class TimeDiscretization implements Serializable, TimeDiscretizationInter
 	private static final long serialVersionUID = 6880668325019167781L;
 
 	private final double[]	timeDiscretization;
-	private final double	timeTickSize = 1.0 / (365.0 * 24.0);
+	private final double	timeTickSize;
 
 	public enum ShortPeriodLocation {
 		SHORT_PERIOD_AT_START,
@@ -42,11 +42,16 @@ public class TimeDiscretization implements Serializable, TimeDiscretizationInter
 	 * @param times Given array or arguments list of discretization points.
 	 */
 	public TimeDiscretization(double... times) {
-		super();
-		this.timeDiscretization = times.clone();
-		java.util.Arrays.sort(this.timeDiscretization);
+		this(times, 1.0 / (365.0 * 24.0));
 	}
 
+	public TimeDiscretization(double[] times, double timeTickSize) {
+		super();
+		this.timeDiscretization = times.clone();
+		this.timeTickSize = timeTickSize;
+		java.util.Arrays.sort(this.timeDiscretization);
+	}
+	
 	/**
 	 * Constructs a time discretization from a given set of Doubles.
 	 * The given array does not need to be sorted.
@@ -56,6 +61,7 @@ public class TimeDiscretization implements Serializable, TimeDiscretizationInter
 	public TimeDiscretization(Double[] times) {
 		super();
 		this.timeDiscretization = new double[times.length];
+		this.timeTickSize = 1.0 / (365.0 * 24.0);
 		for(int timeIndex=0; timeIndex<timeDiscretization.length; timeIndex++) this.timeDiscretization[timeIndex] = roundToTimeTickSize(times[timeIndex]);
 		java.util.Arrays.sort(this.timeDiscretization);
 	}
@@ -67,8 +73,13 @@ public class TimeDiscretization implements Serializable, TimeDiscretizationInter
 	 * @param timeDiscretization Given ArrayList of discretization points
 	 */
 	public TimeDiscretization(ArrayList<Double> timeDiscretization) {
+		this(timeDiscretization, 1.0 / (365.0 * 24.0));
+	}
+	
+	public TimeDiscretization(ArrayList<Double> timeDiscretization, double timeTickSize) {
 		super();
 		this.timeDiscretization = new double[timeDiscretization.size()];
+		this.timeTickSize = timeTickSize;
 		for(int timeIndex=0; timeIndex<timeDiscretization.size(); timeIndex++) this.timeDiscretization[timeIndex] = roundToTimeTickSize(timeDiscretization.get(timeIndex));
 		java.util.Arrays.sort(this.timeDiscretization);
 	}
@@ -81,6 +92,7 @@ public class TimeDiscretization implements Serializable, TimeDiscretizationInter
 	public TimeDiscretization(Set<Double> times) {
 		super();
 		this.timeDiscretization = new double[times.size()];
+		this.timeTickSize = 1.0 / (365.0 * 24.0);
 		Iterator<Double> time = times.iterator();
 		for(int timeIndex=0; timeIndex<timeDiscretization.length; timeIndex++) this.timeDiscretization[timeIndex] = roundToTimeTickSize(time.next());
 		java.util.Arrays.sort(this.timeDiscretization);
@@ -97,6 +109,7 @@ public class TimeDiscretization implements Serializable, TimeDiscretizationInter
 	public TimeDiscretization(double initial, int numberOfTimeSteps, double deltaT) {
 		super();
 		timeDiscretization = new double[numberOfTimeSteps+1];
+		this.timeTickSize = 1.0 / (365.0 * 24.0);
 		for(int timeIndex=0; timeIndex<timeDiscretization.length; timeIndex++) timeDiscretization[timeIndex] = roundToTimeTickSize(initial + timeIndex * deltaT);
 	}
 
@@ -116,6 +129,7 @@ public class TimeDiscretization implements Serializable, TimeDiscretizationInter
 		if(roundToTimeTickSize(initial + numberOfTimeSteps * deltaT) < roundToTimeTickSize(last)) numberOfTimeSteps++;
 
 		timeDiscretization = new double[numberOfTimeSteps+1];
+		this.timeTickSize = 1.0 / (365.0 * 24.0);
 		if(shortPeriodLocation == ShortPeriodLocation.SHORT_PERIOD_AT_END) {
 			for(int timeIndex=0; timeIndex<timeDiscretization.length; timeIndex++) timeDiscretization[timeIndex] = roundToTimeTickSize(initial + timeIndex * deltaT);
 			timeDiscretization[timeDiscretization.length-1] = last;

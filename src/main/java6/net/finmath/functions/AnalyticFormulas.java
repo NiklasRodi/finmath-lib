@@ -6,12 +6,15 @@
 package net.finmath.functions;
 
 import java.util.Calendar;
+import java.util.Collections;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.math3.analysis.UnivariateFunction;
 
 import net.finmath.optimizer.GoldenSectionSearch;
 import net.finmath.rootfinder.NewtonsMethod;
 import net.finmath.stochastic.RandomVariableInterface;
+import net.finmath.time.TimeDiscretizationInterface;
 
 /**
  * This class implements some functions as static class methods.
@@ -1305,5 +1308,95 @@ public class AnalyticFormulas {
 		price -= coupon * accrualPeriod;
 
 		return price;
+	}
+	
+	public static double getLinearInterpolation(double xValue, TimeDiscretizationInterface xHeaders, double[] vector) {
+		// data sanity checks
+		if(xHeaders.getNumberOfTimes()==0)
+			throw new IllegalArgumentException("Length of xHeaders (" + xHeaders.getNumberOfTimes() + ") equal to 0");
+		if(xHeaders.getNumberOfTimes()!=vector.length)
+			throw new IllegalArgumentException("Length of xHeaders (" + xHeaders.getNumberOfTimes() + ") does not match length of vector(" + vector.length + ")");
+
+		double xMin = Collections.min(java.util.Arrays.asList(ArrayUtils.toObject(xHeaders.getAsDoubleArray())));
+		double xMax = Collections.max(java.util.Arrays.asList(ArrayUtils.toObject(xHeaders.getAsDoubleArray())));
+		
+		int xIndexSmaller = xValue<xMin ? 0 : xHeaders.getTimeIndexNearestLessOrEqual(xValue);
+		int xIndexGreater = xValue>xMax ? xHeaders.getNumberOfTimes()-1 : xHeaders.getTimeIndexNearestGreaterOrEqual(xValue);
+		
+		double xWeight = xIndexSmaller==xIndexGreater?0.0:(xValue-xHeaders.getTime(xIndexSmaller))/(xHeaders.getTime(xIndexGreater)-xHeaders.getTime(xIndexSmaller));
+
+		double c = (1-xWeight) * vector[xIndexSmaller] + xWeight * vector[xIndexGreater];
+		return c;
+	}
+	
+	public static double getBilinearInterpolation(double xValue, double yValue, TimeDiscretizationInterface xHeaders, TimeDiscretizationInterface yHeaders, double[][] matrix) {
+		// data sanity checks
+		if(xHeaders.getNumberOfTimes()==0 || yHeaders.getNumberOfTimes()==0)
+			throw new IllegalArgumentException("Length of xHeaders (" + xHeaders.getNumberOfTimes() + ") and/or yHeaders (" + yHeaders.getNumberOfTimes() + ") equal to 0");
+		if(xHeaders.getNumberOfTimes()!=matrix.length)
+			throw new IllegalArgumentException("Length of xHeaders (" + xHeaders.getNumberOfTimes() + ") does not match xDimension of matrix (" + matrix.length + ")");
+		if(matrix.length>0 && yHeaders.getNumberOfTimes()!=matrix[0].length)
+			throw new IllegalArgumentException("Length of yHeaders (" + yHeaders.getNumberOfTimes() + ") does not match yDimension of matrix (" + matrix[0].length + ")");
+		
+		double xMin = Collections.min(java.util.Arrays.asList(ArrayUtils.toObject(xHeaders.getAsDoubleArray())));
+		double xMax = Collections.max(java.util.Arrays.asList(ArrayUtils.toObject(xHeaders.getAsDoubleArray())));
+		double yMin = Collections.min(java.util.Arrays.asList(ArrayUtils.toObject(yHeaders.getAsDoubleArray())));
+		double yMax = Collections.max(java.util.Arrays.asList(ArrayUtils.toObject(yHeaders.getAsDoubleArray())));
+		
+		int xIndexSmaller = xValue<xMin ? 0 : xHeaders.getTimeIndexNearestLessOrEqual(xValue);
+		int yIndexSmaller = yValue<yMin ? 0 : yHeaders.getTimeIndexNearestLessOrEqual(yValue);
+		int xIndexGreater = xValue>xMax ? xHeaders.getNumberOfTimes()-1 : xHeaders.getTimeIndexNearestGreaterOrEqual(xValue);
+		int yIndexGreater = yValue>yMax ? yHeaders.getNumberOfTimes()-1 : yHeaders.getTimeIndexNearestGreaterOrEqual(yValue);
+		
+		double xWeight = xIndexSmaller==xIndexGreater?0.0:(xValue-xHeaders.getTime(xIndexSmaller))/(xHeaders.getTime(xIndexGreater)-xHeaders.getTime(xIndexSmaller));
+		double yWeight = yIndexSmaller==yIndexGreater?0.0:(yValue-yHeaders.getTime(yIndexSmaller))/(yHeaders.getTime(yIndexGreater)-xHeaders.getTime(yIndexSmaller));
+
+		double c0 = (1-xWeight) * matrix[xIndexSmaller][yIndexSmaller] + xWeight * matrix[xIndexGreater][yIndexSmaller];
+		double c1 = (1-xWeight) * matrix[xIndexSmaller][yIndexGreater] + xWeight * matrix[xIndexGreater][yIndexGreater];
+		
+		double c = (1-yWeight) * c0 + yWeight * c1;
+		return c;
+	}
+	
+	public static double getTrilinearInterpolation(double xValue, double yValue, double zValue, TimeDiscretizationInterface xHeaders, TimeDiscretizationInterface yHeaders, TimeDiscretizationInterface zHeaders, double[][][] cube) {
+		// data sanity checks
+		if(xHeaders.getNumberOfTimes()==0 || yHeaders.getNumberOfTimes()==0 || zHeaders.getNumberOfTimes()==0)
+			throw new IllegalArgumentException("Length of xHeaders (" + xHeaders.getNumberOfTimes() + "), yHeaders (" + yHeaders.getNumberOfTimes() + ") and/or zHeaders (" + zHeaders.getNumberOfTimes() + ") equal to 0");
+		if(xHeaders.getNumberOfTimes()!=cube.length)
+			throw new IllegalArgumentException("Length of xHeaders (" + xHeaders.getNumberOfTimes() + ") does not match xDimension of cube (" + cube.length + ")");
+		if(cube.length>0 && yHeaders.getNumberOfTimes()!=cube[0].length)
+			throw new IllegalArgumentException("Length of yHeaders (" + yHeaders.getNumberOfTimes() + ") does not match yDimension of cube (" + cube[0].length + ")");
+		if(cube.length>0 && cube[0].length>0 && zHeaders.getNumberOfTimes()!=cube[0][0].length)
+			throw new IllegalArgumentException("Length of zHeaders (" + zHeaders.getNumberOfTimes() + ") does not match zDimension of cube (" + cube[0][0].length + ")");
+		
+		// trilinear implementation according to https://en.wikipedia.org/wiki/Trilinear_interpolation
+		double xMin = Collections.min(java.util.Arrays.asList(ArrayUtils.toObject(xHeaders.getAsDoubleArray())));
+		double xMax = Collections.max(java.util.Arrays.asList(ArrayUtils.toObject(xHeaders.getAsDoubleArray())));
+		double yMin = Collections.min(java.util.Arrays.asList(ArrayUtils.toObject(yHeaders.getAsDoubleArray())));
+		double yMax = Collections.max(java.util.Arrays.asList(ArrayUtils.toObject(yHeaders.getAsDoubleArray())));
+		double zMin = Collections.min(java.util.Arrays.asList(ArrayUtils.toObject(zHeaders.getAsDoubleArray())));
+		double zMax = Collections.max(java.util.Arrays.asList(ArrayUtils.toObject(zHeaders.getAsDoubleArray())));
+		
+		int xIndexSmaller = xValue<xMin ? 0 : xHeaders.getTimeIndexNearestLessOrEqual(xValue);
+		int yIndexSmaller = yValue<yMin ? 0 : yHeaders.getTimeIndexNearestLessOrEqual(yValue);
+		int zIndexSmaller = zValue<zMin ? 0 : zHeaders.getTimeIndexNearestLessOrEqual(zValue);
+		int xIndexGreater = xValue>xMax ? xHeaders.getNumberOfTimes()-1 : xHeaders.getTimeIndexNearestGreaterOrEqual(xValue);
+		int yIndexGreater = yValue>yMax ? yHeaders.getNumberOfTimes()-1 : yHeaders.getTimeIndexNearestGreaterOrEqual(yValue);
+		int zIndexGreater = zValue>zMax ? zHeaders.getNumberOfTimes()-1 : zHeaders.getTimeIndexNearestGreaterOrEqual(zValue);
+		
+		double xWeight = xIndexSmaller==xIndexGreater?0.0:(xValue-xHeaders.getTime(xIndexSmaller))/(xHeaders.getTime(xIndexGreater)-xHeaders.getTime(xIndexSmaller));
+		double yWeight = yIndexSmaller==yIndexGreater?0.0:(yValue-yHeaders.getTime(yIndexSmaller))/(yHeaders.getTime(yIndexGreater)-xHeaders.getTime(yIndexSmaller));
+		double zWeight = zIndexSmaller==zIndexGreater?0.0:(zValue-zHeaders.getTime(zIndexSmaller))/(zHeaders.getTime(zIndexGreater)-zHeaders.getTime(zIndexSmaller));
+		
+		double c00 = (1-xWeight) * cube[xIndexSmaller][yIndexSmaller][zIndexSmaller] + xWeight * cube[xIndexGreater][yIndexSmaller][zIndexSmaller];
+		double c01 = (1-xWeight) * cube[xIndexSmaller][yIndexGreater][zIndexSmaller] + xWeight * cube[xIndexGreater][yIndexGreater][zIndexSmaller];
+		double c10 = (1-xWeight) * cube[xIndexSmaller][yIndexSmaller][zIndexGreater] + xWeight * cube[xIndexGreater][yIndexSmaller][zIndexGreater];
+		double c11 = (1-xWeight) * cube[xIndexSmaller][yIndexGreater][zIndexGreater] + xWeight * cube[xIndexGreater][yIndexGreater][zIndexGreater];
+		
+		double c0 = (1-yWeight) * c00 + yWeight * c01;
+		double c1 = (1-yWeight) * c10 + yWeight * c11;
+		
+		double c = (1-zWeight) * c0 + zWeight * c1;
+		return c;
 	}
 }

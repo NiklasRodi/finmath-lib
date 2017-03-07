@@ -70,13 +70,17 @@ public class SwapLeg extends AbstractAnalyticProduct implements AnalyticProductI
 
 	@Override
 	public double getValue(double evaluationTime, AnalyticModelInterface model) {	
+		// temporary hack to match Summit behaviour ()
+		if(isNotionalExchanged)
+			evaluationTime = Math.max(evaluationTime, legSchedule.getPeriodStart(0));
+			
 		DiscountCurveInterface	discountCurve = model.getDiscountCurve(discountCurveName);
 		DiscountCurveInterface	discountCurveForNotionalReset = model.getDiscountCurve(discountCurveForNotionalResetName);
 		// Check for discount curve
 		if(discountCurve == null)
 			throw new IllegalArgumentException("No discount curve with name '" + discountCurveName + "' was found in the model.");
 		if(discountCurveForNotionalReset == null)
-			throw new IllegalArgumentException("No discount curve with name '" + discountCurveForNotionalResetName + "' (used to calculate resettable notional) was found in the model.");
+			throw new IllegalArgumentException("No discount curve with name '" + discountCurveForNotionalResetName + "' (used to calculate resettable notional) was found in the model:\n" + model.toString());
 		
 		ForwardCurveInterface forwardCurve = model.getForwardCurve(forwardCurveName);
 		double firstPeriodStartDate	= legSchedule.getPeriodStart(0);
@@ -91,19 +95,19 @@ public class SwapLeg extends AbstractAnalyticProduct implements AnalyticProductI
 			value = discountCurve.getDiscountFactor(model, firstPeriodStartDate)*discountCurve.getDiscountFactor(model, lastPaymentDate)/discountCurve.getDiscountFactor(model, lastPeriodEndDate)-discountCurve.getDiscountFactor(model, lastPaymentDate);
 		} else {
 			if(forwardCurve == null && forwardCurveName != null && forwardCurveName.length() > 0)
-				throw new IllegalArgumentException("No forward curve with name '" + forwardCurveName + "' was found in the model.");
+				throw new IllegalArgumentException("No forward curve with name '" + forwardCurveName + "' was found in the model:\n" + model.toString());
 			
-			for(int periodIndex=0; periodIndex<legSchedule.getNumberOfPeriods(); periodIndex++) {
-				double liborFixingDate 		= legSchedule.getFixing(periodIndex);
-				double swapPeriodStartDate	= legSchedule.getPeriodStart(periodIndex);
-				double swapPeriodEndDate	= legSchedule.getPeriodEnd(periodIndex);
-				double paymentDate 			= legSchedule.getPayment(periodIndex);
-				double swapDayCountFraction	= legSchedule.getPeriodLength(periodIndex);
+			for(int iPeriod=0; iPeriod<legSchedule.getNumberOfPeriods(); iPeriod++) {
+				double liborFixingDate 		= legSchedule.getFixing(iPeriod);
+				double swapPeriodStartDate	= legSchedule.getPeriodStart(iPeriod);
+				double swapPeriodEndDate	= legSchedule.getPeriodEnd(iPeriod);
+				double paymentDate 			= legSchedule.getPayment(iPeriod);
+				double swapDayCountFraction	= legSchedule.getPeriodLength(iPeriod);
 				// empty period is interpreted as misspecification
 				if(swapDayCountFraction == 0)
-					throw new IllegalArgumentException(periodIndex + "th period of swapLeg is empty.");
+					throw new IllegalArgumentException(iPeriod + "th period of swapLeg is empty.");
 	
-				double forward = spread;
+				double forward = 0.0;
 				if(forwardCurve != null) {
 					/**
 					 * the way the forward is calculated here should go hand in hand with the way it is done in Swap.getForwardSwapRate()
@@ -115,13 +119,13 @@ public class SwapLeg extends AbstractAnalyticProduct implements AnalyticProductI
 				}
 				
 				// note that notional = 1 if discountCurveForNotionalReset = discountCurve
-				double notional = (discountCurveForNotionalReset.getDiscountFactor(model,swapPeriodStartDate)/discountCurveForNotionalReset.getDiscountFactor(model,firstPeriodStartDate)) / (discountCurve.getDiscountFactor(model,swapPeriodStartDate)/discountCurve.getDiscountFactor(model,firstPeriodStartDate));
-				double discountFactorPaymentDate = paymentDate >= evaluationTime ? discountCurve.getDiscountFactor(model, paymentDate) : 0.0;
-				value += notional * forward * swapDayCountFraction * discountFactorPaymentDate;
+				double notional = (discountCurveForNotionalReset.getDiscountFactor(model,legSchedule.getPeriodStart(iPeriod))/discountCurveForNotionalReset.getDiscountFactor(model,firstPeriodStartDate)) / (discountCurve.getDiscountFactor(model,legSchedule.getPeriodStart(iPeriod))/discountCurve.getDiscountFactor(model,firstPeriodStartDate));
+				double discountFactorPaymentDate = paymentDate < evaluationTime ? 0.0 : discountCurve.getDiscountFactor(model, paymentDate);
+				value += notional * (forward+spread) * swapDayCountFraction * discountFactorPaymentDate;
 				
 				if(isNotionalExchanged) {
-					value -= swapPeriodStartDate >= evaluationTime ? discountCurve.getDiscountFactor(model, swapPeriodStartDate) : 0.0;
-					value += swapPeriodEndDate >= evaluationTime ? discountCurve.getDiscountFactor(model, swapPeriodEndDate) : 0.0;		
+					value -= swapPeriodStartDate < evaluationTime ? 0.0 : notional*discountCurve.getDiscountFactor(model, swapPeriodStartDate);
+					value += swapPeriodEndDate < evaluationTime ? 0.0 : notional*discountCurve.getDiscountFactor(model, swapPeriodEndDate);		
 				}
 			}
 		}
@@ -149,11 +153,16 @@ public class SwapLeg extends AbstractAnalyticProduct implements AnalyticProductI
 		return isNotionalExchanged;
 	}
 
+	public double getAnnuity(AnalyticModelInterface model) {
+		if(model==null)
+			throw new IllegalArgumentException("model==null");
+		
+		double annuity = SwapAnnuity.getSwapAnnuity(0.0, this.getSchedule(), discountCurveName, model);
+		return annuity;
+	}
+	
 	@Override
 	public String toString() {
-		return "SwapLeg [legSchedule=" + legSchedule + ", forwardCurveName="
-				+ forwardCurveName + ", spread=" + spread
-				+ ", discountCurveName=" + discountCurveName
-				+ ", isNotionalExchanged=" + isNotionalExchanged + "]";
+		return "SwapLeg [forwardCurveName=" + forwardCurveName + ", spread=" + spread + ", discountCurveName=" + discountCurveName + ", discountCurveForNotionalResetName=" + discountCurveForNotionalResetName + ", isNotionalExchanged=" + isNotionalExchanged + ", " + legSchedule.toString() + "]\n";
 	}
 }
