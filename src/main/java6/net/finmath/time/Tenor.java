@@ -23,7 +23,6 @@ public class Tenor extends TimeDiscretization implements TenorInterface {
 
 	private static final long serialVersionUID = 4027884423439197483L;
 
-	private static	DayCountConventionInterface	internalDayCounting = new DayCountConvention_ACT_365();
 	private			LocalDate					referenceDate;
 
 	private 		LocalDate[]					dates;
@@ -49,7 +48,7 @@ public class Tenor extends TimeDiscretization implements TenorInterface {
 
 		for(int timeIndex=0; timeIndex<timeDiscretization.length; timeIndex++) {
 			timeDiscretization[timeIndex] =
-					internalDayCounting.getDaycountFraction(referenceDate, dates[timeIndex]);
+					Schedule.internalDayCounting.getDaycountFraction(referenceDate, dates[timeIndex]);
 		}
 
 		return timeDiscretization;
