@@ -57,6 +57,26 @@ public interface BusinessdayCalendarInterface {
 	LocalDate getAdjustedDate(LocalDate date, DateRollConvention dateRollConvention);
 
 	/**
+	 * Create a new date by "adding" a year fraction to a given base date.
+	 * 
+	 * <p>
+	 * The date offset may be given by codes like 1D, 2D, 1W, 2W, 1M, 2M, 3M,
+	 * 1Y, 2Y, etc., where the letters denote the units as follows: D denotes days, B or BD denotes business days, W denotes weeks, M denotes month
+	 * Y denotes years. If the date offset does not carry a letter code at the end, it will
+	 * be interpreted as ACT/365 year fraction.
+	 * </p>
+	 * 
+	 * <p>
+	 * The function may be used to ease the creation of maturities in spreadsheets.
+	 * </p>
+	 * 
+	 * @param baseDate The start date.
+	 * @param dateOffsetCode String containing date offset codes (like 2D, 1W, 3M, etc.) or combination of them separated by spaces.
+	 * @return A date corresponding the date adding the offset to the start date.
+	 */
+	LocalDate createDateFromDateAndOffsetCode(LocalDate baseDate, String dateOffsetCode);
+	
+	/**
 	 * Get an adjusted date for a given date and offset code.
 	 * 
 	 * First we create a new date by "adding" an offset to the base date.
@@ -83,4 +103,6 @@ public interface BusinessdayCalendarInterface {
 	 * @return A date of a business day such that the number of business days between this one (including) and the start date (excluding) is businessDays.
 	 */
 	public LocalDate getRolledDate(LocalDate baseDate, int businessDays);
+	
+	public String toString();
 }

@@ -8,10 +8,12 @@ package net.finmath.time;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Locale;
 
 import org.joda.time.LocalDate;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
-import net.finmath.time.businessdaycalendar.BusinessdayCalendar;
 import net.finmath.time.businessdaycalendar.BusinessdayCalendarAny;
 import net.finmath.time.businessdaycalendar.BusinessdayCalendarInterface;
 import net.finmath.time.businessdaycalendar.BusinessdayCalendarInterface.DateRollConvention;
@@ -115,7 +117,7 @@ public class ScheduleGenerator {
 	}
 
 	/**
-	 * Schedule generation from meta data.
+	 * Schedule generation for given {referenceDate,startDate,maturityDate}.
 	 * 
 	 * Generates a schedule based on some meta data.
 	 * <ul>
@@ -128,7 +130,7 @@ public class ScheduleGenerator {
 	 * 
 	 * @param referenceDate The date which is used in the schedule to internally convert dates to doubles, i.e., the date where t=0.
 	 * @param startDate The start date of the first period.
-	 * @param maturity The end date of the first period.
+	 * @param maturityDate The end date of the first period.
 	 * @param frequency The frequency.
 	 * @param daycountConvention The daycount convention.
 	 * @param shortPeriodConvention If short period exists, have it first or last.
@@ -142,7 +144,7 @@ public class ScheduleGenerator {
 	public static ScheduleInterface createScheduleFromConventions(
 			LocalDate referenceDate,
 			LocalDate startDate,
-			LocalDate maturity,
+			LocalDate maturityDate,
 			Frequency frequency,
 			DaycountConvention daycountConvention,
 			ShortPeriodConvention shortPeriodConvention,
@@ -221,7 +223,7 @@ public class ScheduleGenerator {
 			LocalDate periodStartDate			= businessdayCalendar.getAdjustedDate(periodStartDateUnadjusted, dateRollConvention);
 
 			int periodIndex = 0;
-			while(periodStartDateUnadjusted.isBefore(maturity)) {
+			while(periodStartDateUnadjusted.isBefore(maturityDate)) {
 				periodIndex++;
 				// The following code only makes calculations on periodEndXxx while the periodStartXxx is only copied and used to check if we terminate
 				// Determine period end
@@ -239,9 +241,9 @@ public class ScheduleGenerator {
 							.plusWeeks(periodLengthWeeks*periodIndex)
 							.plusMonths(periodLengthMonth*periodIndex);
 				}
-				if(periodEndDateUnadjusted.isAfter(maturity)) {
-					periodEndDateUnadjusted 	= maturity;
-					periodStartDateUnadjusted 	= maturity;	// Terminate loop (next periodEndDateUnadjusted)
+				if(periodEndDateUnadjusted.isAfter(maturityDate)) {
+					periodEndDateUnadjusted 	= maturityDate;
+					periodStartDateUnadjusted 	= maturityDate;	// Terminate loop (next periodEndDateUnadjusted)
 				}
 
 				// Adjust period
@@ -268,8 +270,8 @@ public class ScheduleGenerator {
 			/*
 			 * Going backward on periodEndDate, starting with maturity as periodEndDate
 			 */
-			LocalDate periodStartDateUnadjusted	= maturity;
-			LocalDate periodEndDateUnadjusted	= maturity;
+			LocalDate periodStartDateUnadjusted	= maturityDate;
+			LocalDate periodEndDateUnadjusted	= maturityDate;
 			LocalDate periodEndDate				= businessdayCalendar.getAdjustedDate(periodEndDateUnadjusted, dateRollConvention);
 			
 			int periodIndex = 0;
@@ -277,8 +279,8 @@ public class ScheduleGenerator {
 				periodIndex++;
 				// The following code only makes calculations on periodStartXxx while the periodEndXxx is only copied and used to check if we terminate
 				// Determine period start
-				if(isUseEndOfMonth && maturity.getDayOfMonth() == maturity.dayOfMonth().getMaximumValue()) {
-					periodStartDateUnadjusted = maturity
+				if(isUseEndOfMonth && maturityDate.getDayOfMonth() == maturityDate.dayOfMonth().getMaximumValue()) {
+					periodStartDateUnadjusted = maturityDate
 							.plusDays(1)
 							.minusDays(periodLengthDays*periodIndex)
 							.minusWeeks(periodLengthWeeks*periodIndex)
@@ -286,7 +288,7 @@ public class ScheduleGenerator {
 							.minusDays(1);
 				}
 				else {
-					periodStartDateUnadjusted = maturity
+					periodStartDateUnadjusted = maturityDate
 							.minusDays(periodLengthDays*periodIndex)
 							.minusWeeks(periodLengthWeeks*periodIndex)
 							.minusMonths(periodLengthMonth*periodIndex);
@@ -323,28 +325,7 @@ public class ScheduleGenerator {
 	}
 
 	/**
-	 * Schedule generation from meta data.
-	 * 
-	 * Generates a schedule based on some meta data.
-	 * <ul>
-	 * 	<li>The schedule generation considers short stub periods at beginning or at the end.</li>
-	 * 	<li>Date rolling is performed using the provided businessdayCalendar.</li>
-	 * </ul>
-	 * 
-	 * The reference date is used internally to represent all dates as doubles, i.e.
-	 * t = 0 corresponds to the reference date.
-	 * 
-	 * @param referenceDate The date which is used in the schedule to internally convert dates to doubles, i.e., the date where t=0.
-	 * @param startDate The start date of the first period.
-	 * @param maturity The end date of the first period.
-	 * @param frequency The frequency.
-	 * @param daycountConvention The daycount convention.
-	 * @param shortPeriodConvention If short period exists, have it first or last.
-	 * @param dateRollConvention Adjustment to be applied to the all dates.
-	 * @param businessdayCalendar Businessday calendar (holiday calendar) to be used for date roll adjustment.
-	 * @param fixingOffsetDays Number of business days to be added to period start to get the fixing date.
-	 * @param paymentOffsetDays Number of business days to be added to period end to get the payment date.
-	 * @return The corresponding schedule
+	 * See other method (with isUseEndOfMonth=false)
 	 */
 	public static ScheduleInterface createScheduleFromConventions(
 			LocalDate referenceDate,
@@ -359,31 +340,11 @@ public class ScheduleGenerator {
 			int	paymentOffsetDays
 			)
 	{
-		return createScheduleFromConventions(referenceDate, startDate, maturity, frequency, daycountConvention, shortPeriodConvention, dateRollConvention, businessdayCalendar, fixingOffsetDays, paymentOffsetDays, false /* use end of month rule */);
+		return createScheduleFromConventions(referenceDate, startDate, maturity, frequency, daycountConvention, shortPeriodConvention, dateRollConvention, businessdayCalendar, fixingOffsetDays, paymentOffsetDays, false);
 	}
 
 	/**
-	 * Schedule generation from meta data.
-	 * 
-	 * Generates a schedule based on some meta data.
-	 * <ul>
-	 * 	<li>The schedule generation considers short stub periods at beginning or at the end.</li>
-	 * 	<li>Date rolling is performed using the provided businessdayCalendar.</li>
-	 * </ul>
-	 * 
-	 * The reference date is used internally to represent all dates as doubles.
-	 * 
-	 * @param referenceDate The date which is used in the schedule to internally convert dates to doubles, i.e., the date where t=0.
-	 * @param startDate The start date of the first period (this may/should be an unadjusted date).
-	 * @param maturityDate The end date of the last period (this may/should be an unadjusted date).
-	 * @param frequency The frequency.
-	 * @param daycountConvention The daycount convention.
-	 * @param shortPeriodConvention If short period exists, have it first or last.
-	 * @param dateRollConvention Adjustment to be applied to the all dates.
-	 * @param businessdayCalendar Businessday calendar (holiday calendar) to be used for date roll adjustment.
-	 * @param fixingOffsetDays Number of business days to be added to period start to get the fixing date.
-	 * @param paymentOffsetDays Number of business days to be added to period end to get the payment date.
-	 * @return The corresponding schedule
+	 * See other method (with isUseEndOfMonth=false and String input for frequency, daycountConvention, shortPeriodConvention, dateRollConvention)
 	 */
 	public static ScheduleInterface createScheduleFromConventions(
 			LocalDate referenceDate,
@@ -399,41 +360,17 @@ public class ScheduleGenerator {
 			)
 	{
 		return createScheduleFromConventions(
-				referenceDate,
-				startDate,
-				maturityDate,
+				referenceDate, startDate, maturityDate,
 				Frequency.valueOf(frequency.replace("/", "_").toUpperCase()), 
 				DaycountConvention.getEnum(daycountConvention),
 				ShortPeriodConvention.valueOf(shortPeriodConvention.replace("/", "_").toUpperCase()),
 				DateRollConvention.getEnum(dateRollConvention),
-				businessdayCalendar,
-				fixingOffsetDays,
-				paymentOffsetDays
+				businessdayCalendar, fixingOffsetDays, paymentOffsetDays
 				);
 	}
 
 	/**
-	 * Schedule generation from meta data (method using Date instead of LocalDate for backward compatibility).
-	 * 
-	 * Generates a schedule based on some meta data.
-	 * <ul>
-	 * 	<li>The schedule generation considers short stub periods at beginning or at the end.</li>
-	 * 	<li>Date rolling is performed using the provided businessdayCalendar.</li>
-	 * </ul>
-	 * 
-	 * The reference date is used internally to represent all dates as doubles.
-	 * 
-	 * @param referenceDate The date which is used in the schedule to internally convert dates to doubles, i.e., the date where t=0.
-	 * @param startDate The start date of the first period (this may/should be an unadjusted date).
-	 * @param maturityDate The end date of the last period (this may/should be an unadjusted date).
-	 * @param frequency The frequency.
-	 * @param daycountConvention The daycount convention.
-	 * @param shortPeriodConvention If short period exists, have it first or last.
-	 * @param dateRollConvention Adjustment to be applied to the all dates.
-	 * @param businessdayCalendar Businessday calendar (holiday calendar) to be used for date roll adjustment.
-	 * @param fixingOffsetDays Number of business days to be added to period start to get the fixing date.
-	 * @param paymentOffsetDays Number of business days to be added to period end to get the payment date.
-	 * @return The corresponding schedule
+	 * See other method (with isUseEndOfMonth=false, String input and Date input)
 	 */
 	public static ScheduleInterface createScheduleFromConventions(
 			Date referenceDate,
@@ -480,7 +417,45 @@ public class ScheduleGenerator {
 	 * @param businessdayCalendar Business day calendar (holiday calendar) to be used for date roll adjustment.
 	 * @param fixingOffsetDays Number of business days to be added to period start to get the fixing date.
 	 * @param paymentOffsetDays Number of business days to be added to period end to get the payment date.
+	 * @param isUseEndOfMonth If ShortPeriodConvention is LAST and startDate is an end of month date, all period will be adjusted to EOM. If ShortPeriodConvention is FIRST and maturityDate is an end of month date, all period will be adjusted to EOM. 
 	 * @return The corresponding schedule
+	 */
+	public static ScheduleInterface createScheduleFromConventions(
+			LocalDate referenceDate,
+			LocalDate tradeDate,
+			int spotOffsetDays,
+			String startOffset,
+			String maturity,
+			String frequency,
+			String daycountConvention,
+			String shortPeriodConvention,
+			String dateRollConvention,
+			BusinessdayCalendarInterface businessdayCalendar,
+			int	fixingOffsetDays,
+			int	paymentOffsetDays,
+			boolean isUseEndOfMonth
+			)
+	{
+	
+		LocalDate spotDate = businessdayCalendar.getRolledDate(tradeDate, spotOffsetDays);
+		LocalDate unadjustedStartDate = businessdayCalendar.createDateFromDateAndOffsetCode(spotDate, startOffset);
+		LocalDate unadjustedMaturityDate = businessdayCalendar.createDateFromDateAndOffsetCode(unadjustedStartDate, maturity);
+	
+		return createScheduleFromConventions(
+				referenceDate, unadjustedStartDate, unadjustedMaturityDate,
+				Frequency.valueOf(frequency.replace("/", "_").toUpperCase()), 
+				DaycountConvention.getEnum(daycountConvention),
+				ShortPeriodConvention.valueOf(shortPeriodConvention.replace("/", "_").toUpperCase()),
+				DateRollConvention.getEnum(dateRollConvention),
+				businessdayCalendar,
+				fixingOffsetDays,
+				paymentOffsetDays,
+				isUseEndOfMonth
+				);
+	}
+
+	/**
+	 * Simple schedule generation (with isUseEndOfMonth=false)
 	 */
 	public static ScheduleInterface createScheduleFromConventions(
 			LocalDate referenceDate,
@@ -497,46 +472,21 @@ public class ScheduleGenerator {
 			int	paymentOffsetDays
 			)
 	{
-	
-		LocalDate spotDate = businessdayCalendar.getRolledDate(tradeDate, spotOffsetDays);
-		
-		LocalDate startDate = BusinessdayCalendar.createDateFromDateAndOffsetCode(spotDate, startOffset);
-	
-		LocalDate maturityDate = BusinessdayCalendar.createDateFromDateAndOffsetCode(startDate, maturity);
-	
 		return createScheduleFromConventions(
-				referenceDate,
-				startDate,
-				maturityDate,
-				Frequency.valueOf(frequency.replace("/", "_").toUpperCase()), 
-				DaycountConvention.getEnum(daycountConvention),
-				ShortPeriodConvention.valueOf(shortPeriodConvention.replace("/", "_").toUpperCase()),
-				DateRollConvention.getEnum(dateRollConvention),
+				referenceDate, tradeDate, spotOffsetDays,
+				startOffset, maturity, frequency,
+				daycountConvention,
+				shortPeriodConvention,
+				dateRollConvention,
 				businessdayCalendar,
 				fixingOffsetDays,
-				paymentOffsetDays
-				);
+				paymentOffsetDays,
+				false
+		);
 	}
-
+	
 	/**
-	 * Simple schedule generation.
-	 * 
-	 * Generates a schedule based on some meta data. The schedule generation
-	 * considers short periods. Date rolling is ignored.
-	 * 
-	 * @param referenceDate The date which is used in the schedule to internally convert dates to doubles, i.e., the date where t=0.
-	 * @param spotOffsetDays Number of business days to be added to the reference date to obtain the spot date.
-	 * @param startOffset The start date as an offset from the spotDate (build from referenceDate and spotOffsetDays) entered as a code like 1D, 1W, 1M, 2M, 3M, 1Y, etc.
-	 * @param maturity The end date of the first period entered as a code like 1D, 1W, 1M, 2M, 3M, 1Y, etc.
-	 * @param frequency The frequency.
-	 * @param daycountConvention The day count convention.
-	 * @param shortPeriodConvention If short period exists, have it first or last.
-	 * @param dateRollConvention Adjustment to be applied to the all dates.
-	 * @param businessdayCalendar Business day calendar (holiday calendar) to be used for date roll adjustment.
-	 * @param fixingOffsetDays Number of business days to be added to period start to get the fixing date.
-	 * @param paymentOffsetDays Number of business days to be added to period end to get the payment date.
-	 * @param isUseEndOfMonth If ShortPeriodConvention is LAST and startDate is an end of month date, all period will be adjusted to EOM. If ShortPeriodConvention is FIRST and maturityDate is an end of month date, all period will be adjusted to EOM. 
-	 * @return The corresponding schedule
+	 * Simple schedule generation (with tradeDate=referenceDate)
 	 */
 	public static ScheduleInterface createScheduleFromConventions(
 			LocalDate referenceDate,
@@ -553,46 +503,21 @@ public class ScheduleGenerator {
 			boolean isUseEndOfMonth
 			)
 	{
-		
-		LocalDate spotDate = businessdayCalendar.getRolledDate(referenceDate, spotOffsetDays);
-		
-		LocalDate startDate = BusinessdayCalendar.createDateFromDateAndOffsetCode(spotDate, startOffset);
-	
-		LocalDate maturityDate = BusinessdayCalendar.createDateFromDateAndOffsetCode(startDate, maturity);
-	
 		return createScheduleFromConventions(
-				referenceDate,
-				startDate,
-				maturityDate,
-				Frequency.valueOf(frequency.replace("/", "_").toUpperCase()), 
-				DaycountConvention.getEnum(daycountConvention),
-				ShortPeriodConvention.valueOf(shortPeriodConvention.replace("/", "_").toUpperCase()),
-				DateRollConvention.getEnum(dateRollConvention),
+				referenceDate, referenceDate, spotOffsetDays,
+				startOffset, maturity, frequency,
+				daycountConvention,
+				shortPeriodConvention,
+				dateRollConvention,
 				businessdayCalendar,
 				fixingOffsetDays,
 				paymentOffsetDays,
 				isUseEndOfMonth
-				);
+		);
 	}
 
 	/**
-	 * Simple schedule generation.
-	 * 
-	 * Generates a schedule based on some meta data. The schedule generation
-	 * considers short periods. Date rolling is ignored.
-	 * 
-	 * @param referenceDate The date which is used in the schedule to internally convert dates to doubles, i.e., the date where t=0.
-	 * @param spotOffsetDays Number of business days to be added to the reference date to obtain the spot date.
-	 * @param startOffset The start date as an offset from the spotDate (build from referenceDate and spotOffsetDays) entered as a code like 1D, 1W, 1M, 2M, 3M, 1Y, etc.
-	 * @param maturity The end date of the first period entered as a code like 1D, 1W, 1M, 2M, 3M, 1Y, etc.
-	 * @param frequency The frequency.
-	 * @param daycountConvention The day count convention.
-	 * @param shortPeriodConvention If short period exists, have it first or last.
-	 * @param dateRollConvention Adjustment to be applied to the all dates.
-	 * @param businessdayCalendar Business day calendar (holiday calendar) to be used for date roll adjustment.
-	 * @param fixingOffsetDays Number of business days to be added to period start to get the fixing date.
-	 * @param paymentOffsetDays Number of business days to be added to period end to get the payment date.
-	 * @return The corresponding schedule
+	 * Simple schedule generation (with tradeDate=referenceDate and isUseEndOfMonth=false)
 	 */
 	public static ScheduleInterface createScheduleFromConventions(
 			LocalDate referenceDate,
@@ -612,22 +537,7 @@ public class ScheduleGenerator {
 	}
 
 	/**
-	 * Simple schedule generation.
-	 * 
-	 * Generates a schedule based on some meta data. The schedule generation
-	 * considers short periods. Date rolling is ignored.
-	 * 
-	 * @param referenceDate The date which is used in the schedule to internally convert dates to doubles, i.e., the date where t=0.
-	 * @param startOffset The start date as an offset from the referenceDate entered as a code like 1D, 1W, 1M, 2M, 3M, 1Y, etc.
-	 * @param maturity The end date of the first period entered as a code like 1D, 1W, 1M, 2M, 3M, 1Y, etc.
-	 * @param frequency The frequency.
-	 * @param daycountConvention The day count convention.
-	 * @param shortPeriodConvention If short period exists, have it first or last.
-	 * @param dateRollConvention Adjustment to be applied to the all dates.
-	 * @param businessdayCalendar Business day calendar (holiday calendar) to be used for date roll adjustment.
-	 * @param fixingOffsetDays Number of business days to be added to period start to get the fixing date.
-	 * @param paymentOffsetDays Number of business days to be added to period end to get the payment date.
-	 * @return The corresponding schedule
+	 * Simple schedule generation (with tradeDate=referenceDate and isUseEndOfMonth=false and spotOffsetDays=0)
 	 */
 	public static ScheduleInterface createScheduleFromConventions(
 			LocalDate referenceDate,
@@ -642,24 +552,41 @@ public class ScheduleGenerator {
 			int	paymentOffsetDays
 			)
 	{
-		LocalDate startDate = BusinessdayCalendar.createDateFromDateAndOffsetCode(referenceDate, startOffset);
-	
-		LocalDate maturityDate = BusinessdayCalendar.createDateFromDateAndOffsetCode(startDate, maturity);
-	
-		return createScheduleFromConventions(
-				referenceDate,
-				startDate,
-				maturityDate,
-				Frequency.valueOf(frequency.replace("/", "_").toUpperCase()), 
-				DaycountConvention.getEnum(daycountConvention),
-				ShortPeriodConvention.valueOf(shortPeriodConvention.replace("/", "_").toUpperCase()),
-				DateRollConvention.getEnum(dateRollConvention),
-				businessdayCalendar,
-				fixingOffsetDays,
-				paymentOffsetDays
-				);
+		return createScheduleFromConventions(referenceDate, 0, startOffset, maturity, frequency, daycountConvention, shortPeriodConvention, dateRollConvention, businessdayCalendar, fixingOffsetDays, paymentOffsetDays);
 	}
 
+	/**
+	 * Schedule generation with futureCodes
+	 */
+	public static ScheduleInterface createScheduleFromConventions(
+			LocalDate referenceDate,
+			String futureCode,
+			String startOffset,
+			String maturity,
+			String frequency,
+			String daycountConvention,
+			String shortPeriodConvention,
+			String dateRollConvention,
+			BusinessdayCalendarInterface businessdayCalendar,
+			int	fixingOffsetDays,
+			int	paymentOffsetDays
+			)
+	{
+		int futureExpiryYears = 2000 + Integer.parseInt(futureCode.substring(futureCode.length()-2));
+		String futureExpiryMonthsString = futureCode.substring(0,futureCode.length()-2);
+		DateTimeFormatter englishDateFormatter = DateTimeFormat.forPattern("dd/MMM/yyyy").withLocale(Locale.ENGLISH);;
+		String futureExpiryString = "01/" + futureExpiryMonthsString + "/" + futureExpiryYears;
+		LocalDate futureExpiryDate = englishDateFormatter.parseLocalDate(futureExpiryString);
+		// get third wednesday in month, adjust with following if no busday
+		while(futureExpiryDate.getDayOfWeek()!=3)
+			futureExpiryDate = futureExpiryDate.plusDays(1);
+		futureExpiryDate = futureExpiryDate.plusWeeks(2);
+		futureExpiryDate = businessdayCalendar.getAdjustedDate(futureExpiryDate, startOffset, DateRollConvention.FOLLOWING); // adjust to the next good busday
+
+		LocalDate maturityDate = businessdayCalendar.createDateFromDateAndOffsetCode(futureExpiryDate, maturity);
+		return createScheduleFromConventions(referenceDate, futureExpiryDate, maturityDate, frequency, daycountConvention, shortPeriodConvention, dateRollConvention, businessdayCalendar, fixingOffsetDays, paymentOffsetDays);
+	}
+	
 	/**
 	 * Generates a schedule based on some meta data. The schedule generation
 	 * considers short periods.
@@ -740,7 +667,7 @@ public class ScheduleGenerator {
 				new BusinessdayCalendarAny(),
 				0, 0);
 	}
-
+	
 	/**
 	 * Create a new date by "adding" a year fraction to the start date.
 	 * The year fraction is interpreted in a 30/360 way. More specifically,
