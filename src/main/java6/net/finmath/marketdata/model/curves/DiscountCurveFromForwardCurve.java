@@ -33,8 +33,9 @@ public class DiscountCurveFromForwardCurve extends AbstractCurve implements Seri
 
 	private static final long serialVersionUID = -4126228588123963885L;
 
-	private String					forwardCurveName;
-	private ForwardCurveInterface	forwardCurve;
+	public static final String nameSuffix = "_asDiscountCurve";
+	private String					baseForwardCurveName;
+	private ForwardCurveInterface	baseForwardCurve;
 
 	private final double			timeScaling;
 	
@@ -46,14 +47,16 @@ public class DiscountCurveFromForwardCurve extends AbstractCurve implements Seri
 	 * via df(t+r) = df(t) / (1 + f(t) * r)
 	 * where d is a given the payment offset and f(t) is the forward curve.
 	 * 
-	 * @param forwardCurveName The name of the forward curve used for calculation of the discount factors.
+	 * @param baseForwardCurveName The name of the forward curve used for calculation of the discount factors.
 	 * @param periodLengthTimeScaling A scaling factor applied to d, adjusting for the internal double time to the period length daycount fraction (note that this may only be an approximate solution to capture daycount effects).
 	 */
-	public DiscountCurveFromForwardCurve(String forwardCurveName, double periodLengthTimeScaling) {
-		super("DiscountCurveFromForwardCurve(" + forwardCurveName + ")", null);
+	public DiscountCurveFromForwardCurve(String baseForwardCurveName, double periodLengthTimeScaling) {
+		super(baseForwardCurveName + nameSuffix, null);
 
-		this.forwardCurveName	= forwardCurveName;
-		this.timeScaling		= periodLengthTimeScaling;
+		this.baseForwardCurveName	= baseForwardCurveName;
+		this.timeScaling			= periodLengthTimeScaling;
+		
+		System.out.println("Create discount curve '" + baseForwardCurveName + nameSuffix + "' from forward curve '" + baseForwardCurveName);
 	}
 
 	/**
@@ -68,35 +71,19 @@ public class DiscountCurveFromForwardCurve extends AbstractCurve implements Seri
 	 * @param periodLengthTimeScaling A scaling factor applied to d, adjusting for the internal double time to the period length daycount fraction (note that this may only be an approximate solution to capture daycount effects).
 	 */
 	public DiscountCurveFromForwardCurve(ForwardCurveInterface forwardCurve, double periodLengthTimeScaling) {
-		super("DiscountCurveFromForwardCurve" + forwardCurve.getName() + ")", null);
-
-		this.forwardCurve	= forwardCurve;
-		this.timeScaling	= periodLengthTimeScaling;
+		this(forwardCurve.getName(), periodLengthTimeScaling);
+		this.baseForwardCurve = forwardCurve;
 	}
    
 	/**
-	 * Create a discount curve using a given forward curve.
-	 * The discount factors df(t) are defined at t = k * d for integers k
-	 * via df(t+d) = df(t) / (1 + f(t) * d) and
-	 * for t = k * d and 0 &lt; r &lt; d
-	 * via df(t+r) = df(t) / (1 + f(t) * r)
-	 * where d is a given the payment offset and f(t) is the forward curve.
-	 * 
-	 * @param forwardCurveName The name of the forward curve used for calculation of the discount factors.
+	 * See other constructors
 	 */
 	public DiscountCurveFromForwardCurve(String forwardCurveName) {
 		this(forwardCurveName, 1.0);
 	}
 
 	/**
-	 * Create a discount curve using a given forward curve.
-	 * The discount factors df(t) are defined at t = k * d for integers k
-	 * via df(t+d) = df(t) / (1 + f(t) * d) and
-	 * for t = k * d and 0 &lt; r &lt; d
-	 * via df(t+r) = df(t) / (1 + f(t) * r)
-	 * where d is a given the payment offset and f(t) is the forward curve.
-	 * 
-	 * @param forwardCurve The forward curve used for calculation of the discount factors.
+	 * See other constructors
 	 */
 	public DiscountCurveFromForwardCurve(ForwardCurveInterface forwardCurve) {
 		this(forwardCurve, 1.0);
@@ -115,11 +102,16 @@ public class DiscountCurveFromForwardCurve extends AbstractCurve implements Seri
 	 */
 	@Override
 	public double getDiscountFactor(AnalyticModelInterface model, double maturity) {
-		ForwardCurveInterface	forwardCurve;
-		if(this.forwardCurve != null)	forwardCurve = this.forwardCurve;
-		else							forwardCurve = model.getForwardCurve(forwardCurveName);
-
-		if(forwardCurve == null) throw new IllegalArgumentException("No forward curve given and no forward curve found in the model under the name " + forwardCurveName + ".");
+		ForwardCurveInterface forwardCurve;
+		if(baseForwardCurve != null)
+			forwardCurve = baseForwardCurve;
+		else if(model != null)								
+			forwardCurve = model.getForwardCurve(baseForwardCurveName);
+		else
+			throw new IllegalArgumentException("Cannot get discount factor without curve or model.");
+		
+		if(forwardCurve == null) 
+			throw new IllegalArgumentException("No forward curve given and no forward curve found in the model under the name " + baseForwardCurveName);
 
 		double	time			= 0;
 		double	discountFactor	= 1.0;
@@ -163,8 +155,8 @@ public class DiscountCurveFromForwardCurve extends AbstractCurve implements Seri
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((forwardCurve == null) ? 0 : forwardCurve.hashCode());
-		result = prime * result + ((forwardCurveName == null) ? 0 : forwardCurveName.hashCode());
+		result = prime * result + ((baseForwardCurve == null) ? 0 : baseForwardCurve.hashCode());
+		result = prime * result + ((baseForwardCurveName == null) ? 0 : baseForwardCurveName.hashCode());
 		long temp;
 		temp = Double.doubleToLongBits(timeScaling);
 		result = prime * result + (int) (temp ^ (temp >>> 32));
@@ -183,15 +175,15 @@ public class DiscountCurveFromForwardCurve extends AbstractCurve implements Seri
 		if (getClass() != obj.getClass())
 			return false;
 		DiscountCurveFromForwardCurve other = (DiscountCurveFromForwardCurve) obj;
-		if (forwardCurve == null) {
-			if (other.forwardCurve != null)
+		if (baseForwardCurve == null) {
+			if (other.baseForwardCurve != null)
 				return false;
-		} else if (!forwardCurve.equals(other.forwardCurve))
+		} else if (!baseForwardCurve.equals(other.baseForwardCurve))
 			return false;
-		if (forwardCurveName == null) {
-			if (other.forwardCurveName != null)
+		if (baseForwardCurveName == null) {
+			if (other.baseForwardCurveName != null)
 				return false;
-		} else if (!forwardCurveName.equals(other.forwardCurveName))
+		} else if (!baseForwardCurveName.equals(other.baseForwardCurveName))
 			return false;
 		if (Double.doubleToLongBits(timeScaling) != Double
 				.doubleToLongBits(other.timeScaling))
