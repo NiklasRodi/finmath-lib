@@ -17,7 +17,6 @@ import net.finmath.montecarlo.assetderivativevaluation.products.EuropeanOption;
 import net.finmath.montecarlo.model.AbstractModelInterface;
 import net.finmath.montecarlo.process.AbstractProcess;
 import net.finmath.montecarlo.process.ProcessEulerScheme;
-import net.finmath.stochastic.RandomVariableInterface;
 import net.finmath.time.TimeDiscretization;
 import net.finmath.time.TimeDiscretizationInterface;
 
@@ -63,7 +62,7 @@ public class DisplacedLognomalModelTest {
 
 			monteCarloDisplacedModel = new MonteCarloAssetModel(displacedModel2, process);
 		}
-
+		
 		/*
 		 * Note: The inhomogenous displaced model is not the same as the corresponding interpolation
 		 * of Black and Bachelier. For a homogenous displaced model there is a relation between dispalcement
@@ -87,7 +86,7 @@ public class DisplacedLognomalModelTest {
 
 			monteCarloBlackScholesModel = new MonteCarloAssetModel(blackScholesModel, process);
 		}
-
+		
 		AssetModelMonteCarloSimulationInterface monteCarloBachelierModel;
 		{
 			// Create a corresponding MC process
@@ -98,7 +97,7 @@ public class DisplacedLognomalModelTest {
 
 			monteCarloBachelierModel = new MonteCarloAssetModel(bachelierModel, process);
 		}
-
+		
 		/*
 		 * Value a call option (using the product implementation)
 		 */

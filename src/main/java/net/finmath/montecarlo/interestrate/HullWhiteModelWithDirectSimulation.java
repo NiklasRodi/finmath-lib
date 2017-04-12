@@ -16,6 +16,7 @@ import net.finmath.marketdata.model.curves.ForwardCurveInterface;
 import net.finmath.montecarlo.RandomVariable;
 import net.finmath.montecarlo.interestrate.modelplugins.ShortRateVolailityModelInterface;
 import net.finmath.montecarlo.model.AbstractModel;
+import net.finmath.montecarlo.process.AbstractProcessInterface;
 import net.finmath.stochastic.RandomVariableInterface;
 import net.finmath.time.TimeDiscretizationInterface;
 
@@ -112,7 +113,9 @@ public class HullWhiteModelWithDirectSimulation extends AbstractModel implements
 	private DiscountCurveInterface			discountCurve;
 	private DiscountCurveInterface			discountCurveFromForwardCurve;
 
-	private final ConcurrentHashMap<Integer, RandomVariableInterface> numeraires;
+	// Cache for the numeraires, needs to be invalidated if process changes
+	private final ConcurrentHashMap<Integer, RandomVariableInterface>	numeraires;
+	private AbstractProcessInterface									numerairesProcess = null;
 
 	private final ShortRateVolailityModelInterface volatilityModel;
 
@@ -195,24 +198,34 @@ public class HullWhiteModelWithDirectSimulation extends AbstractModel implements
 		}
 
 		/*
+		 * Check if numeraire cache is values (i.e. process did not change)
+		 */
+		if(getProcess() != numerairesProcess) {
+			numeraires.clear();
+			numerairesProcess = getProcess();
+		}
+
+		/*
 		 * Check if numeraire is part of the cache
 		 */
 		RandomVariableInterface numeraire = numeraires.get(timeIndex);
-		if(numeraire != null) return numeraire;
-
+		if(numeraire == null) {
 		/*
-		 * Numeraire is not part of the cache, calculate it (populate the cache with intermediate numeraires too)
+			 * Calculate the numeraire for timeIndex
 		 */
-		RandomVariableInterface integratedRate = new RandomVariable(0.0);
+			RandomVariableInterface zero = getProcess().getStochasticDriver().getRandomVariableForConstant(0.0);
+			RandomVariableInterface integratedRate = zero;
 		// Add r(t_{i}) (t_{i+1}-t_{i}) for i = 0 to previousTimeIndex-1
 		for(int i=0; i<timeIndex; i++) {
 			RandomVariableInterface rate = getShortRate(i);
-			integratedRate = integratedRate.addProduct(rate, getProcess().getTimeDiscretization().getTimeStep(i));
+				double dt = getProcess().getTimeDiscretization().getTimeStep(i);
+				//			double dt = getB(getProcess().getTimeDiscretization().getTime(i),getProcess().getTimeDiscretization().getTime(i+1));
+				integratedRate = integratedRate.addProduct(rate, dt);
 
 			numeraire = integratedRate.exp();
 			numeraires.put(i+1, numeraire);
 		}
-
+		}
 
 		/*
 		 * Adjust for discounting, i.e. funding or collateralization
@@ -274,6 +287,12 @@ public class HullWhiteModelWithDirectSimulation extends AbstractModel implements
 		double volatilityEffective = scaling*volatilityModel.getVolatility(timeIndexVolatility);
 
 		return new RandomVariableInterface[] { new RandomVariable(volatilityEffective) };
+	}
+
+	@Override
+	public RandomVariableInterface getLIBOR(double time, double periodStart, double periodEnd) throws CalculationException
+	{
+		return getZeroCouponBond(time, periodStart).div(getZeroCouponBond(time, periodEnd)).sub(1.0).div(periodEnd-periodStart);
 	}
 
 	@Override

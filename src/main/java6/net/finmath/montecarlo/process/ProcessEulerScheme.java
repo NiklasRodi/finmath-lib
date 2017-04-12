@@ -16,7 +16,6 @@ import java.util.concurrent.Future;
 import net.finmath.concurrency.FutureWrapper;
 import net.finmath.montecarlo.BrownianMotionInterface;
 import net.finmath.montecarlo.IndependentIncrementsInterface;
-import net.finmath.optimizer.SolverException;
 import net.finmath.stochastic.RandomVariableInterface;
 
 /**
@@ -47,7 +46,6 @@ public class ProcessEulerScheme extends AbstractProcess {
 	static {
 		// Default value is true
 		isUseMultiThreadding = Boolean.parseBoolean(System.getProperty("net.finmath.montecarlo.process.ProcessEulerScheme.isUseMultiThreadding","true"));
-		System.out.println(isUseMultiThreadding);
 	}
 
 	public enum Scheme {
@@ -174,7 +172,13 @@ public class ProcessEulerScheme extends AbstractProcess {
 			final double deltaT = getTime(timeIndex) - getTime(timeIndex - 1);
 
 			// Fetch drift vector
-			RandomVariableInterface[] drift = getDrift(timeIndex - 1, discreteProcess[timeIndex - 1], null);
+			RandomVariableInterface[] drift = null;
+			try {
+				drift = getDrift(timeIndex - 1, discreteProcess[timeIndex - 1], null);
+			}
+			catch(Exception e) {
+				throw new RuntimeException("Drift calculaton failed at time " + getTime(timeIndex - 1), e);
+			}
 
 			// Calculate new realization
 			Vector<Future<RandomVariableInterface>> discreteProcessAtCurrentTimeIndex = new Vector<Future<RandomVariableInterface>>(numberOfComponents);
@@ -188,7 +192,8 @@ public class ProcessEulerScheme extends AbstractProcess {
 				if (driftOfComponent == null) continue;
 
 				Callable<RandomVariableInterface> worker = new  Callable<RandomVariableInterface>() {
-					public RandomVariableInterface call() throws SolverException {
+					public RandomVariableInterface call() {
+						try {
 						RandomVariableInterface[]	factorLoadings		= getFactorLoading(timeIndex - 1, componentIndex, discreteProcess[timeIndex - 1]);
 
 						// Check if the component process has stopped to evolve
@@ -212,7 +217,8 @@ public class ProcessEulerScheme extends AbstractProcess {
 
 						// Add increment to state and applyStateSpaceTransform
 						currentState[componentIndex] = currentState[componentIndex].add(increment);
-						
+						}
+						catch(Exception e) { e.printStackTrace(); System.exit(0);}
 						// Transform the state space to the value space and return it.
 						return applyStateSpaceTransform(componentIndex, currentState[componentIndex]);
 					}
@@ -267,7 +273,7 @@ public class ProcessEulerScheme extends AbstractProcess {
 					currentState[componentIndex] = currentState[componentIndex].add(driftAdjustment);
 
 					// Re-apply state space transform
-					discreteProcess[timeIndex][componentIndex] = applyStateSpaceTransform(componentIndex, currentState[componentIndex]);
+					discreteProcess[timeIndex][componentIndex] = applyStateSpaceTransform(componentIndex, currentState[componentIndex]).cache();
 				} // End for(componentIndex)
 			} // End if(scheme == Scheme.PREDICTOR_CORRECTOR)
 

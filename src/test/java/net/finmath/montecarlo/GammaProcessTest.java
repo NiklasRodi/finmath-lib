@@ -3,15 +3,13 @@
  *
  * Created on 05.07.2014
  */
-package net.finmath.tests.montecarlo;
+package net.finmath.montecarlo;
 
 import java.text.DecimalFormat;
 
 import org.junit.Assert;
 import org.junit.Test;
 
-import net.finmath.montecarlo.GammaProcess;
-import net.finmath.montecarlo.IndependentIncrementsInterface;
 import net.finmath.stochastic.RandomVariableInterface;
 import net.finmath.time.TimeDiscretization;
 import net.finmath.time.TimeDiscretizationInterface;
@@ -20,7 +18,7 @@ import net.finmath.time.TimeDiscretizationInterface;
  * @author Christian Fries
  * 
  */
-public class GammaProcessTests {
+public class GammaProcessTest {
 
 	static final DecimalFormat formatterReal2	= new DecimalFormat(" 0.00");
 	static final DecimalFormat formatterSci4	= new DecimalFormat(" 0.0000E00;-0.0000E00");

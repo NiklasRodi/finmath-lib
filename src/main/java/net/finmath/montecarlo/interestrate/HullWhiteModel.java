@@ -6,7 +6,6 @@
 package net.finmath.montecarlo.interestrate;
 
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import net.finmath.exception.CalculationException;
 import net.finmath.marketdata.model.AnalyticModelInterface;
@@ -107,8 +106,6 @@ public class HullWhiteModel extends AbstractModel implements LIBORModelInterface
 	private DiscountCurveInterface			discountCurve;
 	private DiscountCurveInterface			discountCurveFromForwardCurve;
 
-	private final ConcurrentHashMap<Integer, RandomVariableInterface> numeraires;
-
 	private final ShortRateVolailityModelInterface volatilityModel;
 
 	/**
@@ -137,8 +134,6 @@ public class HullWhiteModel extends AbstractModel implements LIBORModelInterface
 		this.volatilityModel	= volatilityModel;
 
 		this.discountCurveFromForwardCurve = new DiscountCurveFromForwardCurve(forwardRateCurve);
-
-		numeraires = new ConcurrentHashMap<Integer, RandomVariableInterface>();
 	}
 
 	@Override
@@ -162,7 +157,7 @@ public class HullWhiteModel extends AbstractModel implements LIBORModelInterface
 	public RandomVariableInterface getNumeraire(double time) throws CalculationException {
 		if(time == getTime(0)) {
 			// Initial value of numeraire is one - BrownianMotionInterface serves as a factory here.
-			RandomVariableInterface one = getProcess().getBrownianMotion().getRandomVariableForConstant(1.0);
+			RandomVariableInterface one = getProcess().getStochasticDriver().getRandomVariableForConstant(1.0);
 			return one;
 		}
 
@@ -185,18 +180,8 @@ public class HullWhiteModel extends AbstractModel implements LIBORModelInterface
 					.div(nextTime-previousTime).exp();
 		}
 
-		/*
-		 * Check if numeraire is part of the cache
-		 */
-		RandomVariableInterface numeraire = numeraires.get(timeIndex);
-		if(numeraire != null) return numeraire;
-
-		/*
-		 * Numeraire is not part of the cache, calculate it (populate the cache with intermediate numeraires too)
-		 */
 		RandomVariableInterface logNum = getProcessValue(timeIndex, 1).add(0.5*getV(0,time));
-		numeraire = logNum.exp().div(discountCurveFromForwardCurve.getDiscountFactor(time));
-		numeraires.put(timeIndex, numeraire);
+		RandomVariableInterface numeraire = logNum.exp().div(discountCurveFromForwardCurve.getDiscountFactor(curveModel, time));
 
 		/*
 		 * Adjust for discounting, i.e. funding or collateralization
@@ -264,6 +249,12 @@ public class HullWhiteModel extends AbstractModel implements LIBORModelInterface
 	}
 
 	@Override
+	public RandomVariableInterface getLIBOR(double time, double periodStart, double periodEnd) throws CalculationException
+	{
+		return getZeroCouponBond(time, periodStart).div(getZeroCouponBond(time, periodEnd)).sub(1.0).div(periodEnd-periodStart);
+	}
+
+	@Override
 	public RandomVariableInterface getLIBOR(int timeIndex, int liborIndex) throws CalculationException {
 		return getZeroCouponBond(getProcess().getTime(timeIndex), getLiborPeriod(liborIndex)).div(getZeroCouponBond(getProcess().getTime(timeIndex), getLiborPeriod(liborIndex+1))).sub(1.0).div(getLiborPeriodDiscretization().getTimeStep(liborIndex));
 	}
@@ -304,7 +295,7 @@ public class HullWhiteModel extends AbstractModel implements LIBORModelInterface
 	}
 
 	@Override
-	public LIBORMarketModelInterface getCloneWithModifiedData(Map<String, Object> dataModified) throws CalculationException {
+	public LIBORModelInterface getCloneWithModifiedData(Map<String, Object> dataModified) throws CalculationException {
 		throw new UnsupportedOperationException();
 	}
 
@@ -313,7 +304,7 @@ public class HullWhiteModel extends AbstractModel implements LIBORModelInterface
 		double timePrev = timeIndex > 0 ? getProcess().getTime(timeIndex-1) : time;
 		double timeNext = getProcess().getTime(timeIndex+1);
 
-		double zeroRate = -Math.log(discountCurveFromForwardCurve.getDiscountFactor(timeNext)/discountCurveFromForwardCurve.getDiscountFactor(time)) / (timeNext-time);
+		double zeroRate = -Math.log(discountCurveFromForwardCurve.getDiscountFactor(curveModel, timeNext)/discountCurveFromForwardCurve.getDiscountFactor(curveModel, time)) / (timeNext-time);
 
 		double alpha = zeroRate + getDV(0, time);
 
@@ -325,6 +316,11 @@ public class HullWhiteModel extends AbstractModel implements LIBORModelInterface
 
 	private RandomVariableInterface getZeroCouponBond(double time, double maturity) throws CalculationException {
 		int timeIndex = getProcess().getTimeIndex(time);
+		if(timeIndex < 0) {
+			int timeIndexLo = -timeIndex-1-1;
+			double timeLo = getProcess().getTime(timeIndexLo);
+			return getZeroCouponBond(timeLo, maturity).mult(getShortRate(timeIndexLo).mult(time-timeLo).exp());
+		}
 		RandomVariableInterface shortRate = getShortRate(timeIndex);
 		double A = getA(time, maturity);
 		double B = getB(time, maturity);
@@ -369,11 +365,11 @@ public class HullWhiteModel extends AbstractModel implements LIBORModelInterface
 		double timeStep = getProcess().getTimeDiscretization().getTimeStep(timeIndex);
 
 		double dt = timeStep;
-		double zeroRate = -Math.log(discountCurveFromForwardCurve.getDiscountFactor(time+dt)/discountCurveFromForwardCurve.getDiscountFactor(time)) / dt;
+		double zeroRate = -Math.log(discountCurveFromForwardCurve.getDiscountFactor(curveModel, time+dt)/discountCurveFromForwardCurve.getDiscountFactor(curveModel, time)) / dt;
 
 		double B = getB(time,maturity);
 
-		double lnA = Math.log(discountCurveFromForwardCurve.getDiscountFactor(maturity)/discountCurveFromForwardCurve.getDiscountFactor(time))
+		double lnA = Math.log(discountCurveFromForwardCurve.getDiscountFactor(curveModel, maturity)/discountCurveFromForwardCurve.getDiscountFactor(curveModel, time))
 				+ B * zeroRate - 0.5 * getShortRateConditionalVariance(0,time) * B * B;
 
 		return Math.exp(lnA);

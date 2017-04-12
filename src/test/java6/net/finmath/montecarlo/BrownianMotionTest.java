@@ -3,7 +3,7 @@
  *
  * Created on 10.02.2004
  */
-package net.finmath.tests.montecarlo;
+package net.finmath.montecarlo;
 
 import java.text.DecimalFormat;
 
@@ -11,7 +11,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import net.finmath.functions.JarqueBeraTest;
-import net.finmath.montecarlo.BrownianMotion;
 import net.finmath.stochastic.RandomVariableInterface;
 import net.finmath.time.TimeDiscretization;
 import net.finmath.time.TimeDiscretizationInterface;
@@ -20,7 +19,7 @@ import net.finmath.time.TimeDiscretizationInterface;
  * @author Christian Fries
  * 
  */
-public class BrownianMotionTests {
+public class BrownianMotionTest {
 
 	static final DecimalFormat formatterReal2	= new DecimalFormat(" 0.00");
 	static final DecimalFormat formatterSci4	= new DecimalFormat(" 0.0000E00;-0.0000E00");

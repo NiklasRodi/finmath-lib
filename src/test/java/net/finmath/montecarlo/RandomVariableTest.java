@@ -3,12 +3,11 @@
  *
  * Created on 10.02.2004
  */
-package net.finmath.tests.montecarlo;
+package net.finmath.montecarlo;
 
 import org.junit.Assert;
 import org.junit.Test;
 
-import net.finmath.montecarlo.RandomVariable;
 import net.finmath.stochastic.RandomVariableInterface;
 
 /**
@@ -17,7 +16,7 @@ import net.finmath.stochastic.RandomVariableInterface;
  * @author Christian Fries
  * @see net.finmath.montecarlo.RandomVariable
  */
-public class RandomVariableTests {
+public class RandomVariableTest {
 
 	@Test
 	public void testRandomVariableDeterministc() {
