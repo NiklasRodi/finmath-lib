@@ -125,10 +125,10 @@ public class Schedule implements ScheduleInterface {
 	}
 	
 	/**
-	 * Creates a date by adding a double dateOffset (Act/365) to a reference date
+	 * Creates date by adding double dateOffset to reference date: Note that the method currently expects the internal daycounting to be Act/365 
 	 * 
 	 * @param referenceDate reference date to add dateOffset to
-	 * @param dateOffset dateOffset stored as a double with Act/365 convention
+	 * @param dateOffset dateOffset stored as a double with internal daycounting convention convention
 	 * @return The date resulting from adding a double dateOffset (Act/365) to a reference date
 	 */
 	public static LocalDate getDateFromDouble(LocalDate referenceDate, double dateOffset) {
