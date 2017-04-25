@@ -765,6 +765,7 @@ public class CalibratedCurves {
 				// check whether given curve is in fact a forwardCurve for which I have a discountCurveFromForwardCurve in the model
 				String forwardCurveFromDiscountCurveName = forwardCurveName+net.finmath.marketdata.model.curves.ForwardCurveFromDiscountCurve.nameSuffix;
 				forwardCurve = model.getForwardCurve(forwardCurveFromDiscountCurveName);
+				// if not create discountCurveFromForwardCurve
 				if(forwardCurve==null) {
 					// If the specified forward curve exits as a discount curve, we generate a forward curve by wrapping the discount curve, i.e. calculate the forwards from discount factors using the formula (df(T)/df(T+Delta T)-1) / dcf
 					// Temporary "hack" - we try to infer index maturity codes from curve name
@@ -786,9 +787,9 @@ public class CalibratedCurves {
 					forwardCurve = new ForwardCurveFromDiscountCurve(curve.getName(), curve.getName(), swapTenorDefinition.getReferenceDate(), indexMaturityCode, 
 							busDayCalendar, dateRollConvention, daycountScaling, 0.0);
 					model = model.addCurve(forwardCurve.getName(),forwardCurve);
-				} else {
-					throw new IllegalArgumentException("Cannot create forwardCurve " + forwardCurveName + " as this is a discount curve (and doWrapCurves=" + doWrapCurves + ")");
 				}
+			} else {
+				throw new IllegalArgumentException("Cannot create forwardCurve " + forwardCurveName + " as this is a discount curve (and doWrapCurves=" + doWrapCurves + ")");
 			}
 		} else {
 			throw new IllegalArgumentException("Unhandled type. Curve " + curve.getName() + " is neither discount nor forward curve");
