@@ -27,7 +27,6 @@ import net.finmath.marketdata.products.Deposit;
 import net.finmath.marketdata.products.ForwardRateAgreement;
 import net.finmath.marketdata.products.Swap;
 import net.finmath.marketdata.products.SwapLeg;
-import net.finmath.marketdata.products.SwapLegWithResetting;
 import net.finmath.optimizer.SolverException;
 import net.finmath.time.RegularSchedule;
 import net.finmath.time.ScheduleInterface;
@@ -444,7 +443,7 @@ public class CalibratedCurves {
 			// like a fra but future price needs to be translated into rate
 			product = new ForwardRateAgreement(calibrationSpec.swapTenorDefinitionReceiver, 1.0-calibrationSpec.spreadReceiver/100.0, forwardCurveReceiverName, discountCurveReceiverName);
 		} else if(calibrationSpec.type.toLowerCase().equals("swapleg")) {
-			product = new SwapLeg(calibrationSpec.swapTenorDefinitionReceiver, forwardCurveReceiverName, calibrationSpec.spreadReceiver, discountCurveReceiverName, true);
+			product = new SwapLeg(calibrationSpec.swapTenorDefinitionReceiver, forwardCurveReceiverName, calibrationSpec.spreadReceiver, discountCurveReceiverName);
 		} else {
 			// note that the products so far did not require a payer discounting or forward curve
 			// get name of payer discounting and forward curve - due to wrapping they may be different than what the user has entered
@@ -454,16 +453,18 @@ public class CalibratedCurves {
 			forwardCurvePayerName = createForwardCurve(calibrationSpec.swapTenorDefinitionPayer, forwardCurvePayerName);
 						
 			if(calibrationSpec.type.toLowerCase().equals("swap")) {
-				product = new Swap(calibrationSpec.swapTenorDefinitionReceiver, forwardCurveReceiverName, calibrationSpec.spreadReceiver, calibrationSpec.discountCurveReceiverName, calibrationSpec.swapTenorDefinitionPayer, forwardCurvePayerName, calibrationSpec.spreadPayer, calibrationSpec.discountCurvePayerName);
+				SwapLeg	legReceiver	= new SwapLeg(calibrationSpec.swapTenorDefinitionReceiver, forwardCurveReceiverName, calibrationSpec.spreadReceiver, discountCurveReceiverName);
+				SwapLeg	legPayer	= new SwapLeg(calibrationSpec.swapTenorDefinitionPayer, forwardCurvePayerName, calibrationSpec.spreadPayer, discountCurvePayerName);
+				product = new Swap(legReceiver, legPayer);
 			} else if(calibrationSpec.type.toLowerCase().equals("swapwithresetonreceiver")) {
 				String discountCurveForNotionalResetName = calibrationSpec.discountCurvePayerName;
-				SwapLegWithResetting	legReceiver	= new SwapLegWithResetting(calibrationSpec.swapTenorDefinitionReceiver, forwardCurveReceiverName, calibrationSpec.spreadReceiver, calibrationSpec.discountCurveReceiverName, discountCurveForNotionalResetName, true);
-				SwapLeg					legPayer	= new SwapLeg(calibrationSpec.swapTenorDefinitionPayer, forwardCurvePayerName, calibrationSpec.spreadPayer, calibrationSpec.discountCurvePayerName, true);
+				SwapLeg	legReceiver	= new SwapLeg(calibrationSpec.swapTenorDefinitionReceiver, forwardCurveReceiverName, calibrationSpec.spreadReceiver, calibrationSpec.discountCurveReceiverName, discountCurveForNotionalResetName, true);
+				SwapLeg	legPayer	= new SwapLeg(calibrationSpec.swapTenorDefinitionPayer, forwardCurvePayerName, calibrationSpec.spreadPayer, calibrationSpec.discountCurvePayerName, true);
 				product = new Swap(legReceiver, legPayer);
 			} else if(calibrationSpec.type.toLowerCase().equals("swapwithresetonpayer")) {
 				String discountCurveForNotionalResetName = calibrationSpec.discountCurveReceiverName;
-				SwapLeg					legReceiver	= new SwapLeg(calibrationSpec.swapTenorDefinitionReceiver, forwardCurveReceiverName, calibrationSpec.spreadReceiver, calibrationSpec.discountCurveReceiverName, true);
-				SwapLegWithResetting	legPayer	= new SwapLegWithResetting(calibrationSpec.swapTenorDefinitionPayer, forwardCurvePayerName, calibrationSpec.spreadPayer, calibrationSpec.discountCurvePayerName, discountCurveForNotionalResetName, true);
+				SwapLeg	legReceiver	= new SwapLeg(calibrationSpec.swapTenorDefinitionReceiver, forwardCurveReceiverName, calibrationSpec.spreadReceiver, calibrationSpec.discountCurveReceiverName, true);
+				SwapLeg	legPayer	= new SwapLeg(calibrationSpec.swapTenorDefinitionPayer, forwardCurvePayerName, calibrationSpec.spreadPayer, calibrationSpec.discountCurvePayerName, discountCurveForNotionalResetName, true);
 				product = new Swap(legReceiver, legPayer);
 			} else {
 				throw new RuntimeException("Product of type " + calibrationSpec.type + " unknown.");

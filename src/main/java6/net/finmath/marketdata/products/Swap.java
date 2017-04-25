@@ -44,7 +44,7 @@ public class Swap extends AbstractAnalyticProduct implements AnalyticProductInte
 	}
 
 	/**
-	 * Creates a swap with notional exchange. The swap has a unit notional of 1.
+	 * Creates a swap.
 	 * 
 	 * @param scheduleReceiveLeg Schedule of the receiver leg.
 	 * @param forwardCurveReceiveName Name of the forward curve, leave empty if this is a fix leg.
@@ -65,8 +65,8 @@ public class Swap extends AbstractAnalyticProduct implements AnalyticProductInte
 			boolean isNotionalExchanged
 			) {
 		super();
-		legReceiver		= new SwapLeg(scheduleReceiveLeg, forwardCurveReceiveName, spreadReceive, discountCurveReceiveName, isNotionalExchanged /* Notional Exchange */);
-		legPayer		= new SwapLeg(schedulePayLeg, forwardCurvePayName, spreadPay, discountCurvePayName, isNotionalExchanged /* Notional Exchange */);
+		legReceiver	= new SwapLeg(scheduleReceiveLeg, forwardCurveReceiveName, spreadReceive, discountCurveReceiveName, isNotionalExchanged);
+		legPayer	= new SwapLeg(schedulePayLeg, forwardCurvePayName, spreadPay, discountCurvePayName, isNotionalExchanged);
 	}
 
 	/**
@@ -87,7 +87,7 @@ public class Swap extends AbstractAnalyticProduct implements AnalyticProductInte
 			ScheduleInterface schedulePayLeg,
 			String forwardCurvePayName, double spreadPay,
 			String discountCurvePayName) {
-		this(scheduleReceiveLeg, forwardCurveReceiveName, spreadReceive, discountCurveReceiveName, schedulePayLeg, forwardCurvePayName, spreadPay, discountCurvePayName, true);
+		this(scheduleReceiveLeg, forwardCurveReceiveName, spreadReceive, discountCurveReceiveName, schedulePayLeg, forwardCurvePayName, spreadPay, discountCurvePayName, false);
 	}
 
 	/**
@@ -112,9 +112,17 @@ public class Swap extends AbstractAnalyticProduct implements AnalyticProductInte
 
 	@Override
 	public double getValue(double evaluationTime, AnalyticModelInterface model) {	
-
-		double valueReceiverLeg	= legReceiver.getValue(evaluationTime, model);
-		double valuePayerLeg	= legPayer.getValue(evaluationTime, model);
+		double evaluationTimeModified = evaluationTime;
+		// temporary hack for swaps with legs in different currencies and, thus, with different discounting curves across legs (e.g. CCY swaps): 
+		//		One mustn't discount both legs to 0 and set them equal to each other but only to  the first periodStartDate
+		// 		This works only if all legs of the swap have the same first period start date
+		SwapLeg legReceiverAsSwap = (SwapLeg)legReceiver;
+		SwapLeg legPayerAsSwap = (SwapLeg)legReceiver;
+		if(legReceiverAsSwap!=null && legPayerAsSwap!=null && legReceiverAsSwap.getSchedule().getPeriodStart(0)==legPayerAsSwap.getSchedule().getPeriodStart(0))
+			evaluationTimeModified = Math.max(evaluationTime, legReceiverAsSwap.getSchedule().getPeriodStart(0));
+		
+		double valueReceiverLeg	= legReceiver.getValue(evaluationTimeModified, model);
+		double valuePayerLeg	= legPayer.getValue(evaluationTimeModified, model);
 
 		return valueReceiverLeg - valuePayerLeg;
 	}
@@ -182,7 +190,6 @@ public class Swap extends AbstractAnalyticProduct implements AnalyticProductInte
 
 	@Override
 	public String toString() {
-		return "Swap [legReceiver=" + legReceiver + ", legPayer=" + legPayer
-				+ "]";
+		return "Swap [legReceiver=" + legReceiver + ", legPayer=" + legPayer + "]";
 	}
 }
