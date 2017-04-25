@@ -453,13 +453,12 @@ public class CalibratedCurves {
 			String forwardCurvePayerName = calibrationSpec.forwardCurvePayerName;
 			forwardCurvePayerName = createForwardCurve(calibrationSpec.swapTenorDefinitionPayer, forwardCurvePayerName);
 						
-		
 			if(calibrationSpec.type.toLowerCase().equals("swap")) {
 				product = new Swap(calibrationSpec.swapTenorDefinitionReceiver, forwardCurveReceiverName, calibrationSpec.spreadReceiver, calibrationSpec.discountCurveReceiverName, calibrationSpec.swapTenorDefinitionPayer, forwardCurvePayerName, calibrationSpec.spreadPayer, calibrationSpec.discountCurvePayerName);
 			} else if(calibrationSpec.type.toLowerCase().equals("swapwithresetonreceiver")) {
-				String discountCurveForNotionalResetName = discountCurvePayerName;
-				SwapLeg	legReceiver	= new SwapLeg(calibrationSpec.swapTenorDefinitionReceiver, forwardCurveReceiverName, calibrationSpec.spreadReceiver, discountCurveReceiverName, discountCurveForNotionalResetName, true);
-				SwapLeg	legPayer	= new SwapLeg(calibrationSpec.swapTenorDefinitionPayer, forwardCurvePayerName, calibrationSpec.spreadPayer, discountCurvePayerName, true);
+				String discountCurveForNotionalResetName = calibrationSpec.discountCurvePayerName;
+				SwapLegWithResetting	legReceiver	= new SwapLegWithResetting(calibrationSpec.swapTenorDefinitionReceiver, forwardCurveReceiverName, calibrationSpec.spreadReceiver, calibrationSpec.discountCurveReceiverName, discountCurveForNotionalResetName, true);
+				SwapLeg					legPayer	= new SwapLeg(calibrationSpec.swapTenorDefinitionPayer, forwardCurvePayerName, calibrationSpec.spreadPayer, calibrationSpec.discountCurvePayerName, true);
 				product = new Swap(legReceiver, legPayer);
 			} else if(calibrationSpec.type.toLowerCase().equals("swapwithresetonpayer")) {
 				String discountCurveForNotionalResetName = calibrationSpec.discountCurveReceiverName;
