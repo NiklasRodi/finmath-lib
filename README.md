@@ -13,6 +13,11 @@ The finmath lib libraries provides implementations of methodologies related to m
 - General numerical algorithms like
     - Generation of random numbers
     - Optimization (a Levenberg–Marquardt algorithm is provided)
+- Valuation using Fourtier transforms / characteristic functions
+	- Black-Scholes model
+	- Heston model
+	- Bates model
+	- Two factor Bates model
 - Monte-Carlo simulation of multi-dimensional, multi-factor stochastic differential equations (SDEs)
     - LIBOR Market Model
     - Black Scholes type multi-asset model (multi-factor, multi-dimensional geometric Brownian motion)
@@ -118,7 +123,9 @@ Of course, you may use the IDE of your choice by simply importing the maven pom.
 
 
 Documentation
--------------
+-------
+
+For documentation please check out
 
 -   [finmath lib Project documentation][]  
     provides the documentation of the library api.
@@ -146,9 +153,9 @@ The code of "finmath lib" and "finmath experiments" (packages
 Extensions
 -------------------------------------
 
-The finmath-lib-cuda-extensions implement the RandomVariableInterface via Cuda GPU code. This allows to perofrm Monte-Carlo simulations on the GPUs with a minimal change: a replacement of the random variable factory.
+The finmath-lib-cuda-extensions implement the RandomVariableInterface via Cuda GPU code. This allows to perform Monte-Carlo simulations on the GPUs with a minimal change: a replacement of the random variable factory.
 
-The finmath-lib-automaticdifferentiation-extentions implmenet the RandomVariableInterface via an AAD enabled version. This allows to access automatic differentiations with a minial change: a replacement of the random variable factory.
+The finmath-lib-automaticdifferentiation-extensions implement the RandomVariableInterface via an AAD enabled version. This allows to access automatic differentiations with a minimal change: a replacement of the random variable factory.
 
 
 Coding Conventions

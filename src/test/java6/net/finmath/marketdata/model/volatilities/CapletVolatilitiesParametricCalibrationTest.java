@@ -5,8 +5,6 @@
  */
 package net.finmath.marketdata.model.volatilities;
 
-import org.threeten.bp.LocalDate;
-import org.threeten.bp.Month;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -17,6 +15,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+import org.threeten.bp.LocalDate;
+import org.threeten.bp.Month;
 
 import net.finmath.exception.CalculationException;
 import net.finmath.marketdata.model.AnalyticModel;
@@ -58,7 +58,7 @@ public class CapletVolatilitiesParametricCalibrationTest {
 	 * 
 	 * @return Array of parameters.
 	 */
-	@Parameters
+	@Parameters(name="{0}")
 	public static Collection<Object[]> generateData()
 	{
 		return Arrays.asList(new Object[][] {

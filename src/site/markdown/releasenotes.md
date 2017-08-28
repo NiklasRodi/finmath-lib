@@ -5,6 +5,39 @@ finmath lib Release Notes
 
 # Release Notes
 
+## 3.0.14 (20.08.2017)
+
+### Monte-Carlo models
+
+- AbstractModelInterface requires the inverse of the state-space-transform. This enables ProcessEulerScheme to construct a sequential dependency structure (this is useful for AAD).
+- ProcessEulerScheme offers the scheme EULER_FUNCTiONAL (constructs a sequential dependency structure (this is useful for AAD))
+
+### Valuation using Fourier transforms
+
+-- Added discount rate as optional parameter to Heston and Bates model.
+
+## 3.0.12 (19.08.2017)
+
+### Valuation using Fourier transforms
+
+- Added characteristic function of Heston model - allows semi-analytic valuation of option prices under Heston model.
+- Added characteristic function of Bates model - allows semi-analytic valuation of option prices under Bates model.
+
+### Support for finmath-lib automatic differentiation extensions: Interface chances to RandomVariableInterface and Monte-Carlo models
+
+- Minor changes to RandomVariableInterface to support the finmath-lib automatic differentiation extensions.
+- Minor changes to RandomVariableFactories to support the finmath-lib automatic differentiation extensions.
+- Monte-Carlo models may now take their own factory for RandomVariableInterface objects. This allows injection of AAD capable random varaibles.
+- Minor changes to BermdanOption valuation to support the finmath-lib automatic differentiation extensions.
+
+### Improvements
+
+- Fixed a scaling issue in the conditional expectation estimations, improving the result of products using the Option component.
+
+### Other
+
+- Java 8 version is the default in the Eclipse .classpath file.
+
 ## 3.0.0 (27.05.2017)
 
 ### Java 6 version of finmath-lib switched from joda-time to threeten-backport

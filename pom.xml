@@ -11,7 +11,7 @@
 
 	<groupId>net.finmath</groupId>
 	<artifactId>finmath-lib</artifactId>
-	<version>3.0.7-SNAPSHOT</version>
+	<version>3.0.15-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>finmath lib</name>
@@ -333,7 +333,7 @@
 					</header>
 					<footer>
 			   			<![CDATA[
-						<i>Copyright &copy; 2016 Christian&nbsp;P.&nbsp;Fries.</i>
+						<i>Copyright &copy; 2017 Christian&nbsp;P.&nbsp;Fries.</i>
 			   			]]>
 					</footer>
 					<tags>
@@ -352,6 +352,7 @@
 						<link>http://commons.apache.org/proper/commons-math/javadocs/api-3.2/</link>
 					</links>
 					<detectLinks>true</detectLinks>
+					<additionalparam>--allow-script-in-comments</additionalparam>
 				</configuration>
 			</plugin>
 			<plugin>
@@ -406,7 +407,7 @@
 		<url>https://github.com/finmath/finmath-lib</url>
 		<connection>scm:git:https://github.com/finmath/finmath-lib.git</connection>
 		<developerConnection>scm:git:https://github.com/finmath/finmath-lib.git</developerConnection>
-		<tag>finmath-lib-3.0.4</tag>
+		<tag>finmath-lib-3.0.9</tag>
 	</scm>
 
 	<ciManagement>
